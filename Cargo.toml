@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = ["crates/kageha-contracts", "crates/kageha-policy", "crates/kageha-runtime", "crates/kageha-runtime-store"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "sync", "time", "signal"] }
+axum = { version = "0.8", features = ["ws"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+async-trait = "0.1"
+uuid = { version = "1", features = ["v4"] }
+fs2 = "0.4"
+
+[profile.release]
+lto = "thin"
+strip = true

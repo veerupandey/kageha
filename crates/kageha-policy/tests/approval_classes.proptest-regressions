@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc cf02a5b0c4b1ce99d45631c1afebcaafb38211799e145b0ada07b94e7b65456a # shrinks to bare_list = true, legacy = [], other = {}, existing = [], new = EntrySpec { entry: AllowEntry { class: Workspace, scope: Domain("example") }, storable: true }
+cc fb4fdaa562ff953d4c37bc466c97e9bd64762f3cb6b18b64c0041679b1f61df8 # shrinks to tool = "browser_click", args = ArgsSpec { command: None, escalate: None, submission: None, url: Some(Url { scheme: false, userinfo: None, host: Host { labels: ["10", "0", "0", "1"], upper: false, trailing_dot: false }, port: None, path: false }), connector: None, server: None, tool: None }, ctx = CtxSpec { url: None, outside: false, submit: false, checkout: false, settings: false, tags: {}, connector: None, remote_host: None }, base = [], extra = EntrySpec { entry: AllowEntry { class: Workspace, scope: Domain("example") }, storable: true }, target = 3, other_class = Workspace
