@@ -1,0 +1,13 @@
+**
+!Cargo.toml
+!Cargo.lock
+!crates
+!crates/**
+!xtask
+!xtask/**
+**/target
+**/target/**
+**/node_modules
+**/node_modules/**
+**/__pycache__
+**/__pycache__/**

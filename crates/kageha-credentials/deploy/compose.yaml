@@ -1,0 +1,16 @@
+services:
+  credentials:
+    build:
+      context: ../../..
+      dockerfile: crates/kageha-credentials/deploy/Dockerfile
+    user: "10001:10001"
+    read_only: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    ports: ["127.0.0.1:8443:8443"]
+    volumes:
+      - ${KAGEHA_VAULT_STATE:?Set owner-only persistent directory}:/state
+      - ${KAGEHA_VAULT_CONFIG:?Set owner-only config directory}:/run/config:ro
+      - ${KAGEHA_VAULT_SECRETS:?Set operator-provisioned key and TLS directory}:/run/secrets:ro
+    stop_grace_period: 40s

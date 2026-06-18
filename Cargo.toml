@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/kageha-contracts", "crates/kageha-policy", "crates/kageha-runtime", "crates/kageha-runtime-store"]
+members = ["crates/kageha-contracts", "crates/kageha-credentials", "crates/kageha-knowledge", "crates/kageha-memory", "crates/kageha-policy", "crates/kageha-runtime", "crates/kageha-runtime-store", "crates/kageha-sandbox", "crates/kageha-services", "crates/kageha-workspace"]
 
 [workspace.package]
 edition = "2021"
