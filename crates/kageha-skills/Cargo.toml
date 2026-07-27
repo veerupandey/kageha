@@ -1,0 +1,17 @@
+[package]
+name = "kageha-skills"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Independent declarative skill manifests, resource packages and owned lifecycle"
+[dependencies]
+kageha-contracts = { path = "../kageha-contracts" }
+kageha-workspace = { path = "../kageha-workspace" }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml = "0.9"
+sha2.workspace = true
+rusqlite.workspace = true
+libc = "0.2"
+[dev-dependencies]
+tempfile = "3"

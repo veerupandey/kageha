@@ -1,0 +1,16 @@
+[package]
+name = "kageha-session-client"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Rust client and terminal frontend for shared Kageha sessions"
+
+[dependencies]
+reqwest = { workspace = true, features = ["blocking"] }
+serde_json.workspace = true
+uuid.workspace = true
+libc = "0.2"
+
+[[bin]]
+name = "kageha-chat"
+path = "src/bin/kageha-chat.rs"

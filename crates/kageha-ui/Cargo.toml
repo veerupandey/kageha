@@ -1,0 +1,20 @@
+[package]
+name = "kageha-ui"
+default-run = "kageha-ui"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Host-independent state and control protocol for agent-driven UI panels"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { workspace = true, features = ["blocking"], optional = true }
+
+[features]
+terminal-client = ["dep:reqwest"]
+
+[[bin]]
+name = "kageha-agents"
+path = "src/bin/kageha-agents.rs"
+required-features = ["terminal-client"]
