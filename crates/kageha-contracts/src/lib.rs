@@ -4,6 +4,7 @@ use serde_json::{Map, Value};
 use std::collections::BTreeSet;
 pub const VERSION: u32 = 1;
 pub mod agents;
+pub mod decisions;
 pub mod request_budget;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

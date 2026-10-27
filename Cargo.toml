@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/kageha-agents", "crates/kageha-browser-client", "crates/kageha-contracts", "crates/kageha-credentials", "crates/kageha-execution", "crates/kageha-integrations", "crates/kageha-knowledge", "crates/kageha-learning", "crates/kageha-mcp", "crates/kageha-memory", "crates/kageha-policy", "crates/kageha-resources", "crates/kageha-runtime", "crates/kageha-runtime-store", "crates/kageha-sandbox", "crates/kageha-services", "crates/kageha-session-client", "crates/kageha-skills", "crates/kageha-tools", "crates/kageha-ui", "crates/kageha-workflow", "crates/kageha-workspace"]
+members = ["crates/kageha-agents", "crates/kageha-browser-client", "crates/kageha-browser-decisions", "crates/kageha-contracts", "crates/kageha-credentials", "crates/kageha-execution", "crates/kageha-integrations", "crates/kageha-knowledge", "crates/kageha-learning", "crates/kageha-mcp", "crates/kageha-memory", "crates/kageha-models", "crates/kageha-policy", "crates/kageha-resources", "crates/kageha-runtime", "crates/kageha-runtime-store", "crates/kageha-sandbox", "crates/kageha-services", "crates/kageha-session-client", "crates/kageha-skills", "crates/kageha-tools", "crates/kageha-ui", "crates/kageha-workflow", "crates/kageha-workspace"]
 
 [workspace.package]
 edition = "2021"

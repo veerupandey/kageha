@@ -1,0 +1,22 @@
+providers:
+  local:
+    protocol: openai_compat
+    base_url: http://127.0.0.1:8787/v1
+  messages:
+    protocol: anthropic_compat
+    base_url: https://gateway.example/provider
+    api_key_env: FIXTURE_PROVIDER_KEY
+models:
+  - id: local-model
+    provider: local
+    model: upstream-local
+    roles: [default, worker]
+    context_window: 128000
+    capabilities: [tool_calling, vision]
+    request_capabilities: {reasoning_efforts: [low, high]}
+  - id: messages-model
+    provider: messages
+    model: upstream-messages
+    roles: [default]
+roles:
+  default: [messages-model, local-model]
