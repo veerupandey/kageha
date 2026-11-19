@@ -25,7 +25,8 @@ done
 git archive HEAD:resources models.yaml skills | tar -x -C "$root/share/kageha"
 install -m 755 packaging/start "$root/start"
 install -m 644 LICENSE README.md "$root/"
-mkdir -p "$root/docs"
+mkdir -p "$root/docs/assets"
+install -m 644 docs/assets/kageha-browser-demo.png "$root/docs/assets/"
 install -m 644 docs/LINUX_DEPLOYMENT.md "$root/docs/"
 if [[ "$os" == Darwin ]]; then
   cp "$root/start" "$root/Start Kageha.command"

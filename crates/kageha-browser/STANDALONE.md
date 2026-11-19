@@ -52,7 +52,7 @@ Pass `--decision-config /private/path/decisions.json` with either HTTP or MCP
 startup. The model-name registry selects the typed endpoint and resolves provider
 credentials from the daemon environment; no Kageha settings database is consulted.
 Omitted `confidence_cutoff` defaults to **0.90 provider confidence**; omitted
-`batch_confidence_cutoff` defaults to **0.99**. Jev, Clef/Clef-Flash and Luna Decisions
+`batch_confidence_cutoff` defaults to **0.99**. Jev, Clef/Clef-flash, GPT-6 Luna Decisions and Gemini Decision 1
 use the same planner contract. A context may supply its own `decision` object to
 override model/cutoff. Unspecified cutoffs inherit the host policy before defaults;
 review policy and resource budgets are preserved. Explicit `models` entries remain

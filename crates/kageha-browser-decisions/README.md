@@ -85,7 +85,7 @@ let proposal = session.route(&objective, &observation_request, &control)?;
 // regular model when proposal.actions is empty. The planner dispatches nothing.
 ```
 
-`HttpDecisions::from_env` recognizes Jev, Clef/Clef-Flash and Luna decision model
+`HttpDecisions::from_env` recognizes Jev, Clef/Clef-flash, GPT-6 Luna Decisions and Gemini Decision 1 model
 names, selecting only typed endpoints. Custom gateways and credential resolvers
 use `HttpDecisions::new(HttpModel)`; no framework or Kageha dependency is required.
 The configured OpenAI decision model is `gpt-6-luna` at `/v1/decisions`, separate
@@ -100,15 +100,19 @@ replay input. Audit/results report metric, resolved cutoff, selected probability
 and minimum decision score separately.
 
 In Kageha, **Decision-first browser actions → Provider confidence cutoff** saves
-the browser-purpose override. New UI opt-ins start at 0.90. A separate batch
-confidence input defaults to 0.99. Existing saved probability configurations retain
-their behavior until explicitly changed. Missing/invalid confidence, refusals,
+the browser-purpose override. Select provider confidence explicitly when the backend supplies it. The default
+is selected probability (0.90 for an action and 0.99 for a batch). Existing
+cutoffs retain their behavior until explicitly changed. Missing/invalid confidence, refusals,
 invalid distributions, transport errors and insufficient scores use the regular
 agent route; they are never silently upgraded to a probability-based acceptance.
 
 ## Legacy probability configuration
 
-Action routing is opt-in even if the global decision mode is active:
+Kageha policies that opt into `browser_actions_follow_mode` let browser actions
+inherit the default Off, Compare, or Active mode. An explicit browser action
+override takes precedence. Browser guidance and recovery are separate opt-ins
+under this policy. Legacy policies retain their existing default behavior. A
+portable policy can use an explicit browser action override:
 
 ```json
 {
@@ -130,10 +134,13 @@ Shadow mode records decisions without applying them. Semantic state deduplicatio
 and scope-bound checkpoints prevent unchanged-state replay. Once a layout needs
 the heavy executor, it retains that layout until the controls change.
 
-In Kageha, configure **Decision Models → Decision-first browser actions**. The
-catalog separates Clef/Clef-flash and TypeSafe Jev from chat models. Caller workflows
+In Kageha, open **Settings → Decisions**, choose a configured model, and select
+**Use decisions (Active)**. **Test decision model** sends a synthetic question
+through the configured typed endpoint. It checks the response contract and
+selected score type. The browser route indicator separates proposals from actions
+verified by the native executor. Saving applies the policy to new runs. Caller workflows
 provide `known_values`; data entry without explicit caller values remains with the
-heavy model. Kageha and the daemon leave all navigation on the regular executor.
+heavy model. In ordinary Kageha chats the host can grant an explicitly requested link or managed tab, a named native disclosure, or same-path numeric pagination with unchanged filters. Workflows and the standalone daemon default to the regular executor for navigation.
 Embedded frameworks may pass `trusted_click_targets` for known routine controls,
 scoped to the exact observation. These grants must come from trusted host policy,
 never page attributes, agent arguments or decision output. Without such a grant,
@@ -148,6 +155,9 @@ and `contexts`. Supported decision transport protocols are:
 
 * `clef`: full Workers AI `/ai/run/@cf/cloudflare/clef[-flash]` URL; payload contains
   `model`, shared `state` and `questions`; response uses the Workers AI envelope.
+* `gemini_decisions` uses `gemini-decision-1` at Google’s `/v1beta/decisions`
+  with `GEMINI_API_KEY`. It submits the observed state as text, sends named
+  choice questions, and preserves each answer’s probability and confidence.
 * `openai_decisions`: OpenAI `/v1/decisions`; shared state becomes `input_json`,
   fixed Choice questions become the native question array. Native returned
   confidence is preserved; duplicate answers/options and refusals fail closed.
@@ -182,6 +192,14 @@ typed backend against the same heavy executor on the regular route. Record model
 threshold, task success, latency, actions, failures and usage. Do not treat earlier
 GPT-Mini chat-router measurements as Jev/Clef results.
 
+Run `browser_decision_bench.mjs --qualify` with the isolated provider
+credentials, frozen host and browser binaries. The report covers ten alternating
+Active/Off pairs each for ordinary search/filter and form-fill. It records
+verified actions, independently checked task outcomes, provider usage and paired
+latency. The default qualification provider is `typesafe/jev-1.14.0`. The
+runner needs `CMD_API_KEY` and a main-model API key in its environment or
+`KAGEHA_TEST_ENV_FILE`. It does not read the live credential vault.
+
 ### Earlier probability-cutoff evaluation
 
 The results below predate the provider-confidence option and used
@@ -196,7 +214,7 @@ thresholds are preserved; no live settings or hosts were changed by these tests.
 Keep submissions, payments, destructive actions, legal commitments, authentication,
 uploads and unknown widgets on the regular executor and its existing policy path.
 A probability of 1.0 never substitutes for a host target grant, approval, a receipt
-or outcome verification. Kageha currently grants no fast-path click targets.
+or outcome verification. Workflow callers do not grant click targets by default.
 Use Shadow mode for a new backend/version, then qualify narrow operations before
 turning on Active. Do not lower the cutoff just to improve apparent coverage.
 
@@ -375,6 +393,6 @@ cutoffs and context facts are currently startup-owned, never model-editable.
 
 Kageha freezes decision settings with the run spec; changing settings affects new runs. The browser footer exposes the latest host-owned route, configured backend, score metric/cutoffs and reason for regular-agent fallback. It uses the existing browser state response, with no extra polling or preview lifecycle changes. Metadata is stored separately per chat/turn, so late workers cannot overwrite a newer run. No caller values or prompts are included. Route proposals do not claim native execution succeeded.
 
-The UI requires a connected typed backend before enabling browser actions. The loop checks user takeover before inference. Ordinary chats without caller-provided workflow values stay on the regular agent path without an extra decision snapshot or inference. Typed batching remains available to caller-configured workflows; this does not silently extract trusted facts from model-generated text.
+The UI requires a connected typed backend before enabling browser actions. The loop checks user takeover before inference. Ordinary chats can use quoted values, named fields and search terms from the current operator request, including steering. The planner considers observed fields and native select options after browser activity starts. The browser panel reports the latest routed action and its native execution result.
 
 Integration verification (2026-11-08): 72 Rust host unit tests, 100 focused UI tests, TypeScript build and component boundaries passed. A disposable six-step Kageha workflow reached Review from one request with two typed batches/six proposed actions, one upload and zero submissions. Changing settings while running preserved the original cutoff. A missing-native-confidence run routed zero fast actions and completed using the regular executor. Both fixtures deliberately exercise recovery from one tool failure. These are controlled integration tests, not new live-provider calibration or a claim that arbitrary websites are failure-free. Visual inspection covered 320, 390 and 900 px browser panel widths.
