@@ -1,15 +1,14 @@
 //! Typed System One adapter over the shared authenticated, deadline-bound transport.
 use crate::*;
 use kageha_contracts::decisions::{DecisionPort, Request, Result as DecisionResult};
+pub fn is_typed_protocol(protocol: &str) -> bool {
+    matches!(protocol, "clef" | "system_one" | "openai_decisions" | "gemini_decisions")
+}
+
 pub struct HttpDecisions(HttpModel);
 impl HttpDecisions {
     pub fn new(model: HttpModel) -> io::Result<Self> {
-        if model.providers.iter().any(|p| {
-            !matches!(
-                p.protocol.as_str(),
-                "clef" | "system_one" | "openai_decisions"
-            )
-        }) {
+        if model.providers.iter().any(|p| !is_typed_protocol(&p.protocol)) {
             return Err(io::Error::other("A typed decision transport is required"));
         }
         Ok(Self(model))
@@ -36,30 +35,40 @@ impl DecisionPort for HttpDecisions {
             .min()
             .unwrap_or(0);
         if serde_json::to_vec(request)?.len() > context.saturating_sub(2048) {
-            return Err(io::Error::other(
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
                 "Typed decision context exceeds the backend limit",
             ));
         }
         let reply = self.0.complete(
             ModelRequest {
-                role: Default::default(),
                 messages: vec![json!({"role":"user","content":serde_json::to_string(request)?})],
                 tools: vec![],
+                role: Default::default(),
             },
             control,
         )?;
         if !reply.tool_calls.is_empty() {
-            return Err(io::Error::other("Typed decisions cannot invoke tools"));
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "Typed decisions cannot invoke tools"));
         }
         let body: Value = serde_json::from_str(
             reply
                 .content
                 .as_str()
-                .ok_or_else(|| io::Error::other("Invalid typed provider response"))?,
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid typed provider response"))?,
         )
-        .map_err(|_| io::Error::other("Invalid typed provider JSON"))?;
-        DecisionResult::parse(request, &body)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid typed provider JSON"))?;
+        DecisionResult::parse(request, &body).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
     }
+}
+
+pub(crate) fn gemini_payload(request: &Request, model: &str) -> io::Result<Value> {
+    let payload = request.payload(model)?;
+    Ok(json!({
+        "model": model,
+        "input": serde_json::to_string(&request.state)?,
+        "questions": payload["questions"]
+    }))
 }
 
 pub(crate) fn openai_payload(request: &Request, model: &str) -> io::Result<Value> {
@@ -109,6 +118,12 @@ impl HttpDecisions {
     pub fn from_env(model: &str) -> io::Result<Self> {
         let get = |name: &str| crate::catalog::credential(name, |key| std::env::var(key).ok());
         let (url, key, model, protocol) = match model {
+            "gemini-decision-1" | "gemini/gemini-decision-1" => (
+                "https://generativelanguage.googleapis.com/v1beta/decisions".into(),
+                get("GEMINI_API_KEY"),
+                "gemini-decision-1".into(),
+                "gemini_decisions",
+            ),
             "gpt-6-luna" | "openai-decisions/gpt-6-luna" => (
                 "https://api.openai.com/v1/decisions".into(),
                 get("OPENAI_API_KEY"),

@@ -25,9 +25,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|model| {
             model.complete(
                 ModelRequest {
-                    role: Default::default(),
                     messages: vec![json!({"role":"user","content":"Reply with OK."})],
                     tools: vec![],
+                    role: Default::default(),
                 },
                 &Control {
                     cancelled: &AtomicBool::new(false),

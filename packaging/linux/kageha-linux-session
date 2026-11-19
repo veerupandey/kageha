@@ -1,0 +1,206 @@
+#!/bin/bash
+# Run under the dedicated Linux account with a running systemd user manager.
+set -euo pipefail
+umask 077
+export LC_ALL=C.UTF-8
+base=${XDG_STATE_HOME:-$HOME/.local/state}/kageha-linux
+self=$(realpath "$0")
+if [[ -z ${XDG_RUNTIME_DIR:-} && -S /run/user/$UID/bus ]]; then
+    export XDG_RUNTIME_DIR="/run/user/$UID"
+fi
+op=${1:-}
+shift || true
+
+if [[ $op == probe ]]; then
+    for utility in systemctl systemd-run flock; do command -v "$utility" >/dev/null; done
+    systemctl --user show-environment >/dev/null
+    printf 'jobs\n'
+    if command -v socat >/dev/null && command -v curl >/dev/null &&
+       command -v "${KAGEHA_LINUX_CHROMIUM:-chromium}" >/dev/null; then
+        printf 'browser\n'
+        if command -v Xvfb >/dev/null && command -v xauth >/dev/null && command -v openbox >/dev/null &&
+           command -v xdotool >/dev/null && command -v scrot >/dev/null && command -v xterm >/dev/null &&
+           command -v mcookie >/dev/null; then printf 'desktop\n'; fi
+    fi
+    exit 0
+fi
+
+key=${1:-}
+shift || true
+[[ $key =~ ^[a-f0-9]{32}$ ]] || exit 2
+case "$op" in
+    job-*) state="$base/jobs/$key"; unit="kageha-job-$key.service" ;;
+    *) state="$base/sessions/$key"; unit="kageha-gui-$key.service" ;;
+esac
+active() { systemctl --user --quiet is-active "$unit"; }
+
+browser_status() {
+    active && [[ -f $state/epoch && -f $state/profile/DevToolsActivePort ]] || return 1
+    mapfile -t address < "$state/profile/DevToolsActivePort"
+    port=${address[0]:-}
+    browser=${address[1]:-}
+    [[ $port =~ ^[0-9]{1,5}$ && $browser =~ ^/devtools/browser/[0-9a-f-]{36}$ ]] || return 1
+    curl -fsS --max-time 2 "http://127.0.0.1:$port/json/version" >/dev/null || return 1
+    epoch=$(<"$state/epoch")
+}
+
+desktop_environment() {
+    [[ -f $state/display ]] || exit 3
+    export DISPLAY=$(<"$state/display") XAUTHORITY="$state/Xauthority"
+}
+
+case "$op" in
+    ensure)
+        mode=${1:-}
+        [[ $mode == headless || $mode == desktop ]] || exit 2
+        workspace=$(pwd -P)
+        [[ $workspace != *[$'\001'-$'\037'$'\177']* ]] || exit 2
+        chromium=$(command -v "${KAGEHA_LINUX_CHROMIUM:-chromium}")
+        mkdir -p "$state" "$workspace/outputs"
+        transfer="$workspace/.kageha-browser-transfer"
+        if [[ -d $transfer && ! -L $transfer ]]; then
+            find "$transfer" -mindepth 1 -maxdepth 1 -type d -uid "$UID" \
+                \( -name 'browser-upload-*' -o -name 'browser-download-*' \) -mmin +1440 -exec rm -rf -- {} +
+        fi
+        exec 9>"$state/start.lock"
+        flock -w 12 9
+        if ! active; then
+            rm -f "$state/epoch" "$state/display" "$state/profile/DevToolsActivePort"
+            printf '%s\n' "$mode" > "$state/mode"
+            printf '%s\n' "$workspace" > "$state/workspace"
+            systemd-run --user --quiet --collect --service-type=exec --unit="$unit" \
+                --property=KillMode=control-group --property=TimeoutStopSec=5s --property=RuntimeMaxSec=86400s \
+                --setenv="XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}" \
+                --working-directory="$workspace" "$self" serve "$key" "$mode" "$chromium"
+        fi
+        [[ $(<"$state/mode") == "$mode" && $(<"$state/workspace") == "$workspace" ]] || exit 3
+        for ((attempt=0; attempt<75; attempt++)); do
+            if browser_status; then printf '%s %s\n%s\n' "$epoch" "$browser" "$workspace"; exit 0; fi
+            active || exit 3
+            sleep .1
+        done
+        exit 3
+        ;;
+    serve)
+        mode=$1
+        chromium=$2
+        mkdir -p "$state/profile/Default"
+        if [[ ! -f $state/profile/Default/Preferences ]]; then
+            download=$(printf '%s/outputs' "$(pwd -P)" | sed 's/[\\"]/\\&/g')
+            printf '{"download":{"default_directory":"%s","prompt_for_download":false}}\n' "$download" > "$state/profile/Default/Preferences"
+        fi
+        args=(--no-first-run --disable-setuid-sandbox --disable-gpu --remote-debugging-address=127.0.0.1
+              --remote-debugging-port=0 "--user-data-dir=$state/profile")
+        if [[ $mode == desktop ]]; then
+            for ((attempt=0; attempt<24; attempt++)); do
+                display=":$((100 + RANDOM % 3000))"
+                rm -f "$state/Xauthority"
+                xauth -q -f "$state/Xauthority" add "$display" . "$(mcookie)" 2>/dev/null
+                export DISPLAY=$display XAUTHORITY="$state/Xauthority"
+                Xvfb "$display" -screen 0 1440x900x24 -nolisten tcp -auth "$XAUTHORITY" &
+                xvfb=$!
+                for ((i=0; i<20; i++)); do
+                    if kill -0 "$xvfb" 2>/dev/null && xdotool getdisplaygeometry >/dev/null 2>&1; then break 2; fi
+                    kill -0 "$xvfb" 2>/dev/null || break
+                    sleep .05
+                done
+                kill "$xvfb" 2>/dev/null || true
+                wait "$xvfb" 2>/dev/null || true
+            done
+            if ((attempt == 24)); then exit 3; fi
+            printf '%s\n' "$DISPLAY" > "$state/display"
+            openbox &
+        elif [[ $mode == headless ]]; then
+            args+=(--headless)
+        else
+            exit 2
+        fi
+        tr -d '\n' < /proc/sys/kernel/random/uuid > "$state/epoch"
+        exec "$chromium" "${args[@]}" about:blank
+        ;;
+    status)
+        browser_status
+        printf '%s %s\n%s\n' "$epoch" "$browser" "$(<"$state/workspace")"
+        ;;
+    cdp)
+        browser_status
+        [[ ${1:-} == "$epoch" ]] || exit 3
+        exec socat -t 10 STDIO "TCP4:127.0.0.1:$port"
+        ;;
+    frame)
+        browser_status
+        [[ ${1:-} == "$epoch" ]] || exit 3
+        desktop_environment
+        frame=$(mktemp "$state/frame.XXXXXXXX.jpg")
+        trap 'rm -f -- "$frame"' EXIT
+        scrot -o -z "$frame"
+        cat -- "$frame"
+        ;;
+    input)
+        browser_status
+        [[ ${1:-} == "$epoch" ]] || exit 3
+        shift
+        desktop_environment
+        [[ $# -gt 0 ]] || exit 2
+        exec xdotool "$@"
+        ;;
+    terminal|launch)
+        browser_status
+        [[ ${1:-} == "$epoch" ]] || exit 3
+        desktop_environment
+        cd -- "$(<"$state/workspace")"
+        if [[ $op == terminal ]]; then
+            nohup xterm -T 'Kageha Terminal' </dev/null >/dev/null 2>&1 &
+        else
+            app=${2:-}
+            [[ $app =~ ^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$ ]] || exit 2
+            program=$(command -v -- "$app")
+            [[ $program == /* && -x $program ]] || exit 3
+            nohup "$program" </dev/null >/dev/null 2>&1 &
+        fi
+        ;;
+    stop)
+        if active; then systemctl --user stop "$unit"; fi
+        ;;
+    job-start)
+        duration=${1:-}
+        [[ $duration =~ ^[0-9]{1,5}$ && $duration -ge 1 && $duration -le 86400 ]] || exit 2
+        mkdir -p "$base/jobs"
+        # The directory is a durable reservation. A reconnect never submits the same job again.
+        if ! mkdir -- "$state"; then exit 3; fi
+        head -c 32769 > "$state/command"
+        bytes=$(wc -c < "$state/command")
+        [[ $bytes -gt 0 && $bytes -le 32768 ]] || exit 2
+        systemd-run --user --quiet --collect --service-type=exec --unit="$unit" \
+            --property=KillMode=control-group --property=TimeoutStopSec=5s --property="RuntimeMaxSec=${duration}s" \
+            --setenv="XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}" \
+            --working-directory="$(pwd -P)" "$self" job-run "$key"
+        ;;
+    job-run)
+        result=0
+        # Keep output bounded even if a script is noisy. SIGXFSZ terminates the writer.
+        (ulimit -f 16384; /bin/bash --noprofile --norc "$state/command") > "$state/output" 2>&1 || result=$?
+        printf '%s\n' "$result" > "$state/exit.tmp"
+        mv -- "$state/exit.tmp" "$state/exit"
+        ;;
+    job-status)
+        [[ -d $state ]] || exit 3
+        if [[ -f $state/exit ]]; then printf 'exited %s\n' "$(<"$state/exit")"
+        elif [[ -f $state/stopped ]]; then printf 'stopped\n'
+        elif active; then printf 'running\n'
+        else printf 'interrupted\n'; fi
+        ;;
+    job-output)
+        offset=${1:-}
+        [[ $offset =~ ^[0-9]{1,9}$ && -d $state ]] || exit 2
+        if [[ -f $state/output ]]; then dd if="$state/output" iflag=skip_bytes,count_bytes skip="$offset" count=24576 status=none; fi
+        ;;
+    job-stop)
+        [[ -d $state ]] || exit 3
+        if active; then
+            systemctl --user stop "$unit"
+            [[ -f $state/exit ]] || : > "$state/stopped"
+        fi
+        ;;
+    *) exit 2 ;;
+esac

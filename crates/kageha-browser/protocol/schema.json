@@ -1,0 +1,957 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kageha:browser:protocol:1",
+  "title": "Kageha browser service protocol",
+  "x-protocol-version": 1,
+  "x-limits": {
+    "message_bytes": 65536,
+    "frame_bytes": 1048576,
+    "screenshot_bytes": 5242880,
+    "id_bytes": 128,
+    "connections": 16,
+    "requests_per_connection": 64,
+    "remembered_requests": 4096,
+    "deadline_ms": 30000,
+    "idle_ms": 5000
+  },
+  "$defs": {
+    "SubmissionContextParams": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"browser_id":{"type":"string"},"target_id":{"type":"string"},"binding_id":{"type":"string"}},
+      "required": ["browser_id","target_id","binding_id"]
+    },
+    "ConfirmSubmissionParams": {
+      "type":"object", "additionalProperties":false,
+      "properties":{"browser_id":{"type":"string"},"target_id":{"type":"string"},"binding_id":{"type":"string"},"request_id":{"type":"string","minLength":1,"maxLength":128},"legacy_source":{"type":["object","null"],"description":"Host-owned pre-submission observation provenance for legacy receipts; never a success verdict."}},
+      "required":["browser_id","target_id","binding_id","request_id"]
+    },
+    "ReadPageParams": {
+      "type": "object",
+      "properties": {
+        "backend": {"enum": ["http", "lightpanda", "chromium"]},
+        "url": {"type": "string", "minLength": 1, "maxLength": 2048, "pattern": "^https?://"},
+        "max_chars": {"type": "integer", "minimum": 1, "maximum": 8000, "default": 6000},
+        "offset": {"type": "integer", "minimum": 0, "default": 0},
+        "title_contains": {"type": "string", "maxLength": 200, "default": ""},
+        "retain_text": {"type": "boolean", "default": false}
+      },
+      "required": ["backend", "url"],
+      "additionalProperties": false
+    },
+    "RunScriptParams": {
+      "type": "object",
+      "properties": {
+        "version": {"enum": [1, 2, 3]},
+        "code": {"type": "string", "minLength": 1, "maxLength": 24576},
+        "browser_id": {"type": "string", "minLength": 1},
+        "binding_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": ["string", "null"]},
+        "upload": {
+          "type": "object",
+          "properties": {
+            "origin": {"type": "string", "maxLength": 300, "pattern": "^https?://[^/?#@]+$"},
+            "files": {
+              "type": "array", "minItems": 1, "maxItems": 8,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {"type": "string", "minLength": 1, "maxLength": 512},
+                  "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+                },
+                "required": ["path", "sha256"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["origin", "files"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["version", "code", "browser_id", "binding_id", "target_id"],
+      "additionalProperties": false,
+      "if": {"required": ["upload"]},
+      "then": {"properties": {"version": {"const": 3}}},
+      "examples": [
+        {"version": 1, "code": "return browser.tabs();", "browser_id": "browser-1", "binding_id": "browser-1:1", "target_id": null},
+        {
+          "version": 3,
+          "code": "return browser.upload('#file', ['inputs/empty.txt']);",
+          "browser_id": "browser-1",
+          "binding_id": "browser-1:1",
+          "target_id": "tab-1",
+          "upload": {
+            "origin": "https://example.test",
+            "files": [{"path": "inputs/empty.txt", "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}]
+          }
+        }
+      ]
+    },
+    "ScriptReport": {
+      "type": "object",
+      "properties": {
+        "status": {"enum": ["completed", "stopped", "cancelled"]},
+        "error_code": {"type": ["string", "null"]},
+        "completed_calls": {"type": "integer", "minimum": 0, "maximum": 32},
+        "result": {},
+        "tab_handle": {"type": ["string", "null"]},
+        "opened_tabs": {"type": "array", "items": {"type": "string"}, "maxItems": 32},
+        "batch_ids": {"type": "array", "items": {"type": "string"}, "maxItems": 32},
+        "failed_batch": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/BatchReport"}]},
+        "artifacts": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string", "pattern": "^artifacts/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+/[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$"},
+              "mime_type": {"enum": ["text/plain", "text/markdown", "text/csv", "application/json", "image/jpeg", "image/png", "application/pdf", "application/zip", "application/octet-stream"]},
+              "size": {"type": "integer", "minimum": 0, "maximum": 16777216}
+            },
+            "required": ["path", "mime_type", "size"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["status", "error_code", "completed_calls", "result", "tab_handle", "opened_tabs", "batch_ids", "failed_batch"],
+      "additionalProperties": false,
+      "examples": [{"status": "completed", "error_code": null, "completed_calls": 1, "result": true, "tab_handle": "tab-1", "opened_tabs": [], "batch_ids": [], "failed_batch": null}]
+    },
+    "BatchObservedParams": {
+      "type": "object",
+      "properties": {
+        "browser_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "observation_id": {"type": "string", "minLength": 1},
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/BatchAction"}
+        }
+      },
+      "required": ["browser_id", "target_id", "observation_id", "actions"],
+      "additionalProperties": false
+    },
+    "BatchAction": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {"action": {"const": "fill"}, "target": {"type": "string"}, "frame_id": {"type": "string", "minLength": 1},
+                         "text": {"type": "string"}, "verify_value": {"type": "boolean"}},
+          "required": ["action", "target", "text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {"action": {"const": "press"}, "key": {"type": "string"}, "frame_id": {"type": "string", "minLength": 1}},
+          "required": ["action", "key"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {"action": {"const": "click"}, "target": {"type": "string"}, "frame_id": {"type": "string", "minLength": 1},
+                         "expect_selector": {"type": "string"},
+                         "expect_url": {"type": "string", "minLength": 1, "maxLength": 2048},
+                         "timeout_ms": {"type": "integer", "minimum": 1, "maximum": 30000},
+                         "dialog": {"$ref": "#/$defs/BrowserDialog"}},
+          "required": ["action", "target"],
+          "anyOf": [{"required": ["expect_selector"]}, {"required": ["expect_url"]}],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {"action": {"const": "select"}, "target": {"type": "string"},
+                         "frame_id": {"type": "string", "minLength": 1}, "option": {"type": "string", "maxLength": 512}},
+          "required": ["action", "target", "option"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {"action": {"const": "check"}, "target": {"type": "string"},
+                         "frame_id": {"type": "string", "minLength": 1}, "checked": {"type": "boolean"}},
+          "required": ["action", "target", "checked"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {"action": {"const": "verify"}, "target": {"type": "string"}, "frame_id": {"type": "string", "minLength": 1},
+                         "text": {"type": "string"}},
+          "required": ["action", "target"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "BrowserDialog": {
+      "type": "object",
+      "properties": {
+        "url": {"type": "string", "minLength": 1, "maxLength": 2048},
+        "kind": {"enum": ["alert", "confirm", "prompt"]},
+        "message": {"type": "string", "maxLength": 512},
+        "accept": {"type": "boolean"},
+        "prompt_text": {"type": "string", "maxLength": 2048}
+      },
+      "required": ["url", "kind", "message", "accept"],
+      "additionalProperties": false,
+      "if": {"required": ["prompt_text"]},
+      "then": {"properties": {"kind": {"const": "prompt"}, "accept": {"const": true}}}
+    },
+    "BatchReport": {
+      "type": "object",
+      "properties": {
+        "status": {"enum": ["completed", "stopped"]},
+        "batch_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "failed_index": {"type": "integer", "minimum": 0, "maximum": 7},
+        "error_code": {"type": "string", "minLength": 1},
+        "steps": {
+          "type": "array", "minItems": 1, "maxItems": 8,
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {"type": "integer", "minimum": 0, "maximum": 7},
+              "action": {"enum": ["fill", "press", "select", "check", "click", "verify"]},
+              "state": {"enum": ["verified", "not_dispatched", "uncertain", "not_attempted"]},
+              "receipt_request_id": {"type": ["string", "null"]}
+            },
+            "required": ["index", "action", "state", "receipt_request_id"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["status", "batch_id", "target_id", "steps"],
+      "additionalProperties": false
+    },
+    "FillObservedParams": {
+      "type": "object",
+      "properties": {
+        "browser_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "observation_id": {"type": "string", "minLength": 1},
+        "frame_id": {"type": "string", "minLength": 1},
+        "target": {"type": "string", "minLength": 1, "maxLength": 512},
+        "text": {"type": "string", "maxLength": 16384}
+      },
+      "required": ["browser_id", "target_id", "observation_id", "target", "text"],
+      "additionalProperties": false
+    },
+    "PressObservedParams": {
+      "type": "object",
+      "properties": {
+        "browser_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "observation_id": {"type": "string", "minLength": 1},
+        "frame_id": {"type": "string", "minLength": 1},
+        "key": {"type": "string", "minLength": 1, "maxLength": 64}
+      },
+      "required": ["browser_id", "target_id", "observation_id", "key"],
+      "additionalProperties": false
+    },
+    "CloseTabParams": {
+      "type": "object",
+      "properties": {
+        "binding_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "browser_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "target_id": {"type": "string", "minLength": 1, "maxLength": 128}
+      },
+      "required": ["binding_id", "browser_id", "target_id"],
+      "additionalProperties": false
+    },
+    "NavigateTabParams": {
+      "type": "object",
+      "properties": {
+        "browser_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "observation_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "minLength": 1, "maxLength": 2048}
+      },
+      "required": ["browser_id", "target_id", "observation_id", "url"],
+      "additionalProperties": false
+    },
+    "NavigateTabResult": {
+      "type": "object",
+      "properties": {
+        "browser_id": {"type": "string", "minLength": 1},
+        "target_id": {"type": "string", "minLength": 1},
+        "document_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "minLength": 1, "maxLength": 2048}
+      },
+      "required": ["browser_id", "target_id", "document_id", "url"],
+      "additionalProperties": false
+    },
+    "ClaimControlParams": {
+      "type": "object",
+      "properties": {
+        "ttl_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000,
+          "default": 30000
+        }
+      },
+      "additionalProperties": false
+    },
+    "ClaimControlResult": {
+      "type": "object",
+      "properties": {
+        "authority": {"$ref": "#/$defs/Authority"},
+        "expires_ms": {"type": "integer", "minimum": 1}
+      },
+      "required": ["authority", "expires_ms"],
+      "additionalProperties": false
+    },
+    "Authority": {
+      "type": "object",
+      "properties": {
+        "generation": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "grant_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "generation",
+        "grant_id"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "generation": 7,
+          "grant_id": "grant-a"
+        }
+      ]
+    },
+    "Request": {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 1
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "instance_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "client_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state_root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "service_epoch": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deadline_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected_binding": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authority": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Authority"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "request_id",
+        "instance_id",
+        "application_id",
+        "workspace_id",
+        "client_id",
+        "state_root",
+        "service_epoch",
+        "deadline_ms",
+        "expected_binding",
+        "authority",
+        "method",
+        "params"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "protocol_version": 1,
+          "request_id": "request-1",
+          "instance_id": "fixture-instance",
+          "application_id": "fixture-app",
+          "workspace_id": "workspace-a",
+          "client_id": "client-a",
+          "state_root": "/tmp/kageha-browser-fixture",
+          "service_epoch": null,
+          "deadline_ms": 1900000000000,
+          "expected_binding": null,
+          "authority": null,
+          "method": "handshake",
+          "params": {
+            "token": "fixture-token-not-a-credential"
+          }
+        },
+        {
+          "protocol_version": 1,
+          "request_id": "request-2",
+          "instance_id": "fixture-instance",
+          "application_id": "fixture-app",
+          "workspace_id": "workspace-a",
+          "client_id": "client-a",
+          "state_root": "/tmp/kageha-browser-fixture",
+          "service_epoch": "fixture-epoch",
+          "deadline_ms": 1900000000000,
+          "expected_binding": null,
+          "authority": null,
+          "method": "health",
+          "params": {}
+        }
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "additionalProperties": false
+    },
+    "Reply": {
+      "type": "object",
+      "properties": {
+        "protocol_version": {
+          "const": 1
+        },
+        "request_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "instance_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "application_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "workspace_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "client_id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "service_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "error"
+          ]
+        },
+        "execution_phase": {
+          "enum": [
+            "not_dispatched",
+            "dispatched",
+            "verified",
+            "partial",
+            "uncertain"
+          ]
+        },
+        "result": {
+          "type": "object"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "protocol_version",
+        "request_id",
+        "instance_id",
+        "application_id",
+        "workspace_id",
+        "client_id",
+        "service_epoch",
+        "status",
+        "execution_phase",
+        "result",
+        "error"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "protocol_version": 1,
+          "request_id": "request-2",
+          "instance_id": "fixture-instance",
+          "application_id": "fixture-app",
+          "workspace_id": "workspace-a",
+          "client_id": "client-a",
+          "service_epoch": "fixture-epoch",
+          "status": "ok",
+          "execution_phase": "not_dispatched",
+          "result": {
+            "ready": true,
+            "browser_execution": false
+          },
+          "error": null
+        },
+        {
+          "protocol_version": 1,
+          "request_id": "request-2",
+          "instance_id": "fixture-instance",
+          "application_id": "fixture-app",
+          "workspace_id": "workspace-a",
+          "client_id": "client-a",
+          "service_epoch": "fixture-epoch",
+          "status": "error",
+          "execution_phase": "not_dispatched",
+          "result": {},
+          "error": {
+            "code": "unsupported_method",
+            "message": "unsupported method",
+            "retryable": false
+          }
+        }
+      ]
+    },
+    "HandshakeParams": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "additionalProperties": false
+    },
+    "CancelParams": {
+      "type": "object",
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "request_id"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "request_id": "request-1"
+        }
+      ]
+    },
+    "State": {
+      "type": "object",
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "service_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "binding_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "browser_execution": {
+          "const": false
+        }
+      },
+      "required": [
+        "instance_id",
+        "service_epoch",
+        "workspace_id",
+        "revision",
+        "binding_id",
+        "connected",
+        "browser_execution"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "instance_id": "fixture-instance",
+          "service_epoch": "fixture-epoch",
+          "workspace_id": "workspace-a",
+          "revision": 0,
+          "binding_id": null,
+          "connected": false,
+          "browser_execution": false
+        }
+      ]
+    },
+    "ReceiptEvent": {
+      "type": "object",
+      "properties": {
+        "event_sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "service_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_identity": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "document_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "binding_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "intent",
+            "dispatching",
+            "returned",
+            "completed",
+            "verified",
+            "uncertain",
+            "not_dispatched"
+          ]
+        }
+      },
+      "required": [
+        "event_sequence",
+        "service_epoch",
+        "workspace_id",
+        "receipt_id",
+        "attempt_id",
+        "target_identity",
+        "document_id",
+        "binding_id",
+        "state"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "event_sequence": 1,
+          "service_epoch": "fixture-epoch",
+          "workspace_id": "workspace-a",
+          "receipt_id": "receipt-a",
+          "attempt_id": "attempt-a",
+          "target_identity": "target-a",
+          "document_id": "document-a",
+          "binding_id": "binding-a",
+          "state": "uncertain"
+        }
+      ]
+    },
+    "FrameMetadata": {
+      "type": "object",
+      "properties": {
+        "service_epoch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "binding_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "document_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "frame_sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "content_type": {
+          "enum": [
+            "image/jpeg",
+            "image/png"
+          ]
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16777216
+        }
+      },
+      "required": [
+        "service_epoch",
+        "workspace_id",
+        "binding_id",
+        "target_identity",
+        "document_id",
+        "frame_sequence",
+        "width",
+        "height",
+        "content_type",
+        "byte_length"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "service_epoch": "fixture-epoch",
+          "workspace_id": "workspace-a",
+          "binding_id": "binding-a",
+          "target_identity": "target-a",
+          "document_id": "document-a",
+          "frame_sequence": 1,
+          "width": 800,
+          "height": 600,
+          "content_type": "image/jpeg",
+          "byte_length": 1024
+        }
+      ]
+    },
+    "HandshakeResult": {
+      "type": "object",
+      "properties": {
+        "state_root": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "browser_execution": {
+          "const": false
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "message_bytes": {
+              "const": 65536
+            },
+            "connections": {
+              "const": 16
+            }
+          },
+          "required": [
+            "message_bytes",
+            "connections"
+          ],
+          "additionalProperties": false
+        },
+        "action_backend": {
+          "enum": [
+            "fixture",
+            "application",
+            "standalone"
+          ]
+        }
+      },
+      "required": [
+        "state_root",
+        "browser_execution",
+        "methods",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    "HealthResult": {
+      "type": "object",
+      "properties": {
+        "ready": {
+          "const": true
+        },
+        "browser_execution": {
+          "const": false
+        },
+        "shutting_down": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ready",
+        "browser_execution",
+        "shutting_down"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Reply"
+    }
+  ]
+}

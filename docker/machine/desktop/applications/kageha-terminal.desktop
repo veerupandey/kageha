@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Comment=Shell on this computer
+Exec=kageha-term
+Terminal=false
+Categories=System;TerminalEmulator;
+Icon=utilities-terminal

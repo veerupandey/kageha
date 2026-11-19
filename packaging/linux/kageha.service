@@ -1,0 +1,24 @@
+[Unit]
+Description=Kageha assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kageha
+Group=kageha
+StateDirectory=kageha
+StateDirectoryMode=0700
+UMask=0077
+Environment=KAGEHA_DATA_DIR=/var/lib/kageha
+Environment=KAGEHA_WEBUI_PORT=8788
+EnvironmentFile=-/etc/kageha/kageha.env
+WorkingDirectory=/var/lib/kageha
+ExecStart=/opt/kageha/current/start
+Restart=on-failure
+RestartSec=3s
+TimeoutStopSec=25s
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

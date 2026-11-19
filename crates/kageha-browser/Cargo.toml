@@ -1,0 +1,45 @@
+[package]
+name = "kageha-browser"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Isolated Kageha browser runtime (migration protocol milestone)"
+publish = false
+
+[features]
+default = ["numeric-inputs", "submission-confirmation"]
+numeric-inputs = []
+submission-confirmation = []
+
+[dependencies]
+rusqlite.workspace = true
+axum = "0.8"
+data-encoding = "2"
+fs2 = "0.4"
+futures-util = { version = "0.3", features = ["sink"] }
+libc = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync", "signal", "time", "process", "fs"] }
+tokio-tungstenite = "0.30"
+tempfile = "3"
+uuid = { version = "1", features = ["v4"] }
+rquickjs = "0.14.0"
+reqwest.workspace = true
+sha2 = "0.11"
+scraper = { version = "0.24", default-features = false }
+ego-tree = "0.10"
+encoding_rs = "0.8"
+quick-xml = { version = "0.38", features = ["serialize"] }
+chacha20poly1305 = "0.10"
+zeroize = { version = "1", features = ["serde"] }
+url = "2"
+kageha-credentials = { path = "../kageha-credentials", features = ["client"] }
+kageha-contracts = { path = "../kageha-contracts" }
+kageha-execution = { path = "../kageha-execution" }
+kageha-browser-decisions = { path = "../kageha-browser-decisions" }
+kageha-models = { path = "../kageha-models" }
+
+[profile.release]
+lto = "thin"
+strip = true

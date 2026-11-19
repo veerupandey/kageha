@@ -1,0 +1,23 @@
+[package]
+name = "kageha-computer"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+license = "MIT"
+description = "Kageha owned macOS computer-use service"
+
+[features]
+default = ["native-macos"]
+native-macos = []
+
+[dependencies]
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+fs2 = "0.4"
+libc = "0.2"
+base64 = "0.22"
+
+[profile.release]
+lto = "thin"
+strip = true

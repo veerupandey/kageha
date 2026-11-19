@@ -145,9 +145,9 @@ mod tests {
         assert!(model
             .complete(
                 ModelRequest {
-                    role: Default::default(),
                     messages: vec![],
-                    tools: vec![]
+                    tools: vec![],
+                    role: Default::default(),
                 },
                 &control
             )

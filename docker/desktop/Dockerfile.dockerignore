@@ -1,0 +1,10 @@
+*
+!Cargo.toml
+!Cargo.lock
+!crates/
+!crates/**
+!xtask/
+!xtask/**
+!docker/
+!docker/desktop/
+!docker/desktop/entrypoint.sh

@@ -1,0 +1,26 @@
+# Application workflow learnings
+
+These are reusable decisions from observed failures. Private candidate answers and live application IDs belong in session records. This reference supersedes historical rules to store passwords, reuse answers forever, force one giant form batch, or require redundant approval.
+
+| Symptom | Cause / distinction | Safe recovery and limit |
+|---|---|---|
+| Numeric field repeatedly rejects input | Native number inputs require their own input semantics; a harness problem is not missing user input. | Use supported native numeric fill and read back the result; escalate a repeat with unchanged state. |
+| Login toggle repeatedly reports success without changing the panel | An acknowledged click is input delivery; it does not establish a UI effect. | Inspect the actual control and resulting panel once; use the returned ref with its own observation. A no-op click must not reset the unchanged-state budget. Stop after a targeted repair rather than alternating toggles or searching site bundles. |
+| Same form remapped repeatedly through snapshots or shell reads | Diagnostic success and fresh IDs can look like progress without advancing the form. | Keep one question-to-control map for the step, refresh only changed controls, and honor the unchanged-read guard. |
+| Password field is observed but native credential fill cannot find it | Snapshot and inspection may expose different reference formats. | Use the fresh observed control with full identity; refresh once. Never type a vault secret into ordinary fill. |
+| Controls share a long visible name prefix | Bounded display labels are insufficient control identity. | Preserve the full accessible-name identity in the harness; never choose a different question by similar prefix or index. |
+| Select One errors or wrong question answered | Custom menus need their actual visible option and field association; React can replace nodes. | Open one field, inspect the menu, select the exact option, read back the same question. Refresh after remount. |
+| Employment validation persists | Displayed date segments, committed values, and checkbox state differ. | Read named validation; finish date segments together; verify the full date and current-role checked state. Do not duplicate employment. |
+| Source dropdown lacks the expected brand | Option lists vary; matching footer text is unrelated. | Select an offered truthful Other/Not Listed option, if present. Do not fabricate a source or click an unrelated page link. |
+| Resume filename appears despite uncertain upload | Widgets often clear FileList after accepting bytes. | Reconcile the exact original upload against its attached filename. Do not reupload or treat it as final submission proof. |
+| Empty pending receipt list after a final click | Pending lists are not complete durable action history. | Retrieve the original request/outcome history; preserve original receipts and use linked confirmation. |
+| Workday shows Application Submitted but evidence is rejected | Completion URL drops the job ID; original click may have returned without an expected postcondition. | Use the original protected receipt, same tenant/tab/document/session, and actual dialog. No second submit; if provenance is insufficient, state the limitation once. |
+| Different evidence references keep failing | Reference guessing and unrelated outcome amendments can reset weak recovery counters. | Keep recovery scoped to the actual obligation and available proof; one bounded repair, then stop the route. Never weaken proof to make it pass. |
+| Journal capacity blocks all mutations | Receipt retention is part of duplicate protection, not expendable cache. | Stop mutations and repair durable storage. Never delete receipts or bypass the journal. |
+| Account exists inferred from a vault reference or another employer | Credential storage and tenant-specific sign-in are separate facts. | Verify the actual page at the exact tenant. Use one authorized reset with bounded email checks; do not resend indefinitely. |
+| Run appears idle while a question is pending | Waiting for user input differs from a model/browser loop. | Inspect durable pending questions; preserve the draft and wait, while continuing independent work. |
+| A narrower HR question inherits the previous answer | Similar wording does not establish equivalent scope. | Ask the exact required question and store the explicit scoped reply privately. Do not infer from resume omissions. |
+| Salary parser treats an estimate as a posted range | Unknown salary and analyst estimates are not employer evidence. | Keep unknown/unposted salary unverified; use explicit currency and posted values, and the user's actual filters. |
+| City alerts inflate completed-application counts | Multiple listings can route to one ATS requisition. | Link observed aliases to exact employer/tenant/requisition; report listings and unique applications separately. |
+
+Promote future lessons only after a reproduced cause and checked remedy. Put code-level invariants and regression tests in the harness. Keep site-specific mechanics conditional and remove obsolete guidance when tools change. Historical helper scripts do not override current managed-browser schemas or proof safeguards.

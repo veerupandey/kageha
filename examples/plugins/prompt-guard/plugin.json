@@ -1,0 +1,7 @@
+{
+  "name": "prompt-guard",
+  "version": "1.0.0",
+  "api_version": 1,
+  "description": "Add a response preference and block writes to .env files.",
+  "mods": "./guard.py"
+}

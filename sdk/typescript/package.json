@@ -1,0 +1,33 @@
+{
+  "name": "@kageha/client",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./client.d.ts",
+      "import": "./client.mjs"
+    },
+    "./agent": {
+      "types": "./agent.d.ts",
+      "import": "./agent.mjs"
+    },
+    "./credentials": {
+      "types": "./credentials.d.ts",
+      "import": "./credentials.mjs"
+    }
+  },
+  "description": "Independent Kageha agent runtime and memory clients",
+  "files": [
+    "client.mjs",
+    "client.d.ts",
+    "agent.mjs",
+    "agent.d.ts",
+    "README.md",
+    "credentials.mjs",
+    "credentials.d.ts"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,1049 @@
+providers:
+  # Local kiro-proxy; sign in with kiro-cli before starting the proxy.
+  kiro:
+    protocol: openai_compat
+    base_url: http://127.0.0.1:8787/v1
+    api_key_env: KIRO_API_KEY
+  # siliconflow:
+  #   protocol: openai_compat
+  #   base_url: https://api.siliconflow.com/v1
+  #   api_key_env: SILICONFLOW_API_KEY
+  openai:
+    protocol: openai_compat
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+  # ChatGPT / Codex subscription OAuth, owned by the local Codex CLI.
+  openai-codex-app:
+    protocol: codex_app_server
+    base_url: ""
+    api_key_env: OPENAI_CODEX_OAUTH  # sentinel; auth is owned by Codex CLI
+  anthropic:
+    protocol: anthropic_compat
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+  zai:
+    protocol: openai_compat
+    base_url: https://api.z.ai/api/paas/v4
+    api_key_env: ZAI_API_KEY
+  # OpenCode Go ($10/mo) — curated open coding models via Zen gateway.
+  # opencode-go:
+  #   protocol: openai_compat
+  #   base_url: https://opencode.ai/zen/go/v1
+  #   api_key_env: OPENCODE_API_KEY
+  # Command Code Provider API — OpenAI-compatible gateway for frontier and open models.
+  commandcode:
+    protocol: openai_compat
+    base_url: https://api.commandcode.ai/provider/v1
+    api_key_env: CMD_API_KEY
+  # Command Code also serves Anthropic Messages-only models from this root.
+  commandcode-messages:
+    protocol: anthropic_compat
+    base_url: https://api.commandcode.ai/provider
+    api_key_env: CMD_API_KEY
+  gemini:
+    protocol: gemini
+    base_url: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
+  # Cloudflare Workers AI — OpenAI-compatible chat endpoint. Account id comes
+  # from the environment so no account-scoped URL is committed. Media
+  # (image/tts/stt) uses /ai/run and is wired via media_providers below.
+  cloudflare:
+    protocol: openai_compat
+    base_url: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/v1
+    api_key_env: CLOUDFLARE_API_TOKEN
+models:
+  - id: kiro/auto
+    provider: kiro
+    model: auto
+    roles: [default, planning, tool_calling, fast_worker]
+    capabilities: [tool_calling]
+  # Model access is controlled by the Kiro account/organization.
+  - id: kiro/claude-sonnet-5.5
+    provider: kiro
+    model: claude-sonnet-5.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-opus-5.5
+    provider: kiro
+    model: claude-opus-5.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-opus-4.8
+    provider: kiro
+    model: claude-opus-4.8
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-opus-4.7
+    provider: kiro
+    model: claude-opus-4.7
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-opus-4.6
+    provider: kiro
+    model: claude-opus-4.6
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-sonnet-4.6
+    provider: kiro
+    model: claude-sonnet-4.6
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+  - id: kiro/claude-opus-4.5
+    provider: kiro
+    model: claude-opus-4.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 200000
+  - id: kiro/claude-sonnet-4.5
+    provider: kiro
+    model: claude-sonnet-4.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 200000
+  - id: kiro/claude-haiku-4.5
+    provider: kiro
+    model: claude-haiku-4.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 200000
+  # Additional models verified with kiro-cli chat --list-models (2026-11-03).
+  - id: kiro/claude-haiku-5.5
+    provider: kiro
+    model: claude-haiku-5.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+    pricing_note: "Uses Kiro credits (0.06x). Experimental; availability depends on your Kiro profile."
+  - id: kiro/gpt-5.6-sol
+    provider: kiro
+    model: gpt-5.6-sol
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 986000
+    pricing_note: "Uses Kiro credits (4.4x)."
+  - id: kiro/gpt-5.6-terra
+    provider: kiro
+    model: gpt-5.6-terra
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 986000
+    pricing_note: "Uses Kiro credits (2.2x)."
+  - id: kiro/gpt-5.6-luna
+    provider: kiro
+    model: gpt-5.6-luna
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 986000
+    pricing_note: "Uses Kiro credits (0.6x)."
+  - id: kiro/kimi-k3
+    provider: kiro
+    model: kimi-k3
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+    pricing_note: "Uses Kiro credits (2.4x). Experimental; availability depends on your Kiro profile."
+  - id: kiro/claude-opus-5
+    provider: kiro
+    model: claude-opus-5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+    pricing_note: "Uses Kiro credits (2.2x)."
+  - id: kiro/claude-sonnet-5
+    provider: kiro
+    model: claude-sonnet-5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 1000000
+    pricing_note: "Uses Kiro credits (1.3x)."
+  - id: kiro/deepseek-3.2
+    provider: kiro
+    model: deepseek-3.2
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 164000
+    pricing_note: "Uses Kiro credits (0.25x). Experimental; availability depends on your Kiro profile."
+  - id: kiro/minimax-m2.5
+    provider: kiro
+    model: minimax-m2.5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 196000
+    pricing_note: "Uses Kiro credits (0.25x)."
+  - id: kiro/minimax-m2.1
+    provider: kiro
+    model: minimax-m2.1
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 196000
+    pricing_note: "Uses Kiro credits (0.15x). Experimental; availability depends on your Kiro profile."
+  - id: kiro/glm-5
+    provider: kiro
+    model: glm-5
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 200000
+    pricing_note: "Uses Kiro credits (0.5x)."
+  - id: kiro/qwen3-coder-next
+    provider: kiro
+    model: qwen3-coder-next
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 256000
+    pricing_note: "Uses Kiro credits (0.05x). Experimental; availability depends on your Kiro profile."
+
+  # --- OpenCode Go ($10/mo) — select this provider in Settings, then any model ---
+  # Catalog ids match API model names (UI already groups by provider).
+  # vision = native images; video = native video (Flash). Text-only models hop.
+  # - id: glm-5.3-flash
+  #   provider: opencode-go
+  #   model: glm-5.3-flash
+  #   roles: [default, coding, tool_calling, fast_worker]
+  #   usd_per_1k_input: 0.00015
+  #   usd_per_1k_output: 0.0005
+  #   capabilities: [tool_calling, vision, video, structured_output, reasoning]
+  #   request_capabilities: {reasoning_effort: true, thinking: false, preserve_reasoning: true, reasoning_efforts: [low, high, max]}
+  #   context_window: 1000000
+  # - id: glm-5.3
+  #   provider: opencode-go
+  #   model: glm-5.3
+  #   roles: [default, coding, tool_calling, fast_worker, planning]
+  #   usd_per_1k_input: 0.0014
+  #   usd_per_1k_output: 0.0044
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   request_capabilities: {reasoning_effort: true, thinking: true, preserve_reasoning: true, reasoning_efforts: [low, high, max]}
+  #   context_window: 1000000
+  # - id: glm-5.2
+  #   provider: opencode-go
+  #   model: glm-5.2
+  #   roles: []
+  #   usd_per_1k_input: 0.0014
+  #   usd_per_1k_output: 0.0044
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1000000
+  # - id: glm-5.1
+  #   provider: opencode-go
+  #   model: glm-5.1
+  #   roles: []
+  #   usd_per_1k_input: 0.0014
+  #   usd_per_1k_output: 0.0044
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 200000
+  # - id: deepseek-v4-flash
+  #   provider: opencode-go
+  #   model: deepseek-v4-flash
+  #   roles: []
+  #   usd_per_1k_input: 0.00022
+  #   usd_per_1k_output: 0.00066
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1000000
+  # - id: deepseek-v4-flash-vision
+  #   provider: opencode-go
+  #   model: deepseek-v4-flash-vision-exp
+  #   roles: []
+  #   usd_per_1k_input: 0.00022
+  #   usd_per_1k_output: 0.00066
+  #   # Images only (no video) — cheaper vision worker than Flash when video unused.
+  #   capabilities: [tool_calling, vision, structured_output, reasoning]
+  #   context_window: 1000000
+  # - id: deepseek-v4-pro
+  #   provider: opencode-go
+  #   model: deepseek-v4-pro
+  #   roles: []
+  #   usd_per_1k_input: 0.00066
+  #   usd_per_1k_output: 0.00198
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1000000
+  # - id: kimi-k3
+  #   provider: opencode-go
+  #   model: kimi-k3
+  #   roles: []
+  #   usd_per_1k_input: 0.003
+  #   usd_per_1k_output: 0.015
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1049000
+  # - id: kimi-k2.7-code
+  #   provider: opencode-go
+  #   model: kimi-k2.7-code
+  #   roles: []
+  #   usd_per_1k_input: 0.00095
+  #   usd_per_1k_output: 0.004
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 262144
+  # - id: kimi-k2.6
+  #   provider: opencode-go
+  #   model: kimi-k2.6
+  #   roles: []
+  #   usd_per_1k_input: 0.00095
+  #   usd_per_1k_output: 0.004
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 262144
+  # NOTE: "mimo-v2.5" / "mimo-v2.5-pro" / "longcat-2.0" / "hy4-preview" / "hy3"
+  # were previously listed here but do not exist in OpenCode Zen's catalog
+  # (verified against the live, authoritative https://opencode.ai/zen/v1/models
+  # listing) — any turn routed to them failed at call time with an invalid
+  # model error. The only real free-tier MiMo entry is "mimo-v2.5-free".
+  # - id: mimo-v2.5-free
+  #   provider: opencode-go
+  #   model: mimo-v2.5-free
+  #   roles: []
+  #   usd_per_1k_input: 0.0
+  #   usd_per_1k_output: 0.0
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1000000
+
+  # --- Command Code Provider API (optional) ---
+  # Models are served through the OpenAI-compatible /provider/v1 endpoint.
+  # Keep picker IDs stable so saved sessions survive upstream model upgrades.
+  - id: cmd-deepseek-v4-flash
+    provider: commandcode
+    model: deepseek/deepseek-v4.1-flash-fast
+    roles: []
+    usd_per_1k_input: 0.00016
+    usd_per_1k_output: 0.00058
+    usd_per_1k_cached_input: 0.000016
+    capabilities: [tool_calling, vision, reasoning]
+    context_window: 1000000
+  - id: cmd-gpt-5.5
+    provider: commandcode
+    model: gpt-6-luna
+    roles: []
+    usd_per_1k_input: 0.0001
+    usd_per_1k_output: 0.0005
+    usd_per_1k_cached_input: 0.00001
+    usd_per_1k_cache_write: 0.000125
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    context_window: 1050000
+  - id: cmd-glm-5.3-flash
+    provider: commandcode
+    model: z-ai/glm-5.3-flashx
+    roles: []
+    usd_per_1k_input: 0.00037
+    usd_per_1k_output: 0.00125
+    usd_per_1k_cached_input: 0.000075
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    context_window: 1000000
+
+  # Promotions and allowances verified against commandcode.ai/docs/resources/pricing-limits
+  # on 2026-10-24. API access requires GOAT or higher, including free models.
+  - id: commandcode/reflection-beam-free
+    provider: commandcode
+    model: reflection/beam:free
+    display_name: Beam 1.0
+    roles: []
+    usd_per_1k_input: 0.0
+    usd_per_1k_output: 0.0
+    usd_per_1k_cached_input: 0.0
+    capabilities:
+    - tool_calling
+    - reasoning
+    context_window: 1048576
+    pricing_note: Free while capacity lasts; no daily request limit
+  - id: commandcode/stealth-glyph-cluster-free
+    provider: commandcode
+    model: stealth/glyph-cluster:free
+    display_name: Glyph Cluster
+    roles: []
+    usd_per_1k_input: 0.0
+    usd_per_1k_output: 0.0
+    usd_per_1k_cached_input: 0.0
+    capabilities:
+    - tool_calling
+    - reasoning
+    context_window: 256000
+    pricing_note: Free preview; up to 100 requests/day
+  - id: commandcode/poolside-laguna-s-2-1-free
+    provider: commandcode
+    model: poolside/laguna-s-2.1-free
+    display_name: Laguna S 2.1
+    roles: []
+    usd_per_1k_input: 0.0
+    usd_per_1k_output: 0.0
+    usd_per_1k_cached_input: 0.0
+    capabilities:
+    - tool_calling
+    - reasoning
+    context_window: 256000
+    pricing_note: Free while capacity lasts
+  - id: commandcode/minimax-minimax-m3-1-flash
+    provider: commandcode
+    model: minimax/minimax-m3.1-flash
+    display_name: MiniMax M3.1 Flash
+    roles: []
+    usd_per_1k_input: 0.00015
+    usd_per_1k_output: 0.0006
+    usd_per_1k_cached_input: 1.5e-05
+    capabilities:
+    - tool_calling
+    - vision
+    - reasoning
+    context_window: 1000000
+    pricing_note: Fast worker; Go allowance $8 (checked Oct 24, 2026)
+  - id: commandcode/minimaxai-minimax-m3
+    provider: commandcode
+    model: MiniMaxAI/MiniMax-M3
+    display_name: MiniMax M3
+    roles: []
+    usd_per_1k_input: 0.0003
+    usd_per_1k_output: 0.0012
+    usd_per_1k_cached_input: 6.0e-05
+    capabilities:
+    - tool_calling
+    - vision
+    - reasoning
+    context_window: 1000000
+    pricing_note: 50% off discounted upstream; Go allowance $8 (checked Oct 20, 2026)
+  - id: commandcode/qwen-qwen3-7-max
+    provider: commandcode
+    model: Qwen/Qwen3.7-Max
+    display_name: Qwen 3.7 Max
+    roles: []
+    usd_per_1k_input: 0.0025
+    usd_per_1k_output: 0.0075
+    usd_per_1k_cached_input: 0.0005
+    usd_per_1k_cache_write: 0.003125
+    capabilities:
+    - tool_calling
+    - vision
+    - reasoning
+    context_window: 1000000
+    pricing_note: 50% off deal ($2.50 in / $7.50 out); Go allowance $8 (checked Oct 24, 2026)
+  - id: commandcode/ornith-1-5-122b
+    provider: commandcode
+    model: ornith/ornith-1.5-122b
+    display_name: Ornith 1.5 122B
+    roles: []
+    usd_per_1k_input: 0.00016
+    usd_per_1k_output: 0.00064
+    usd_per_1k_cached_input: 2.0e-05
+    capabilities:
+    - tool_calling
+    - vision
+    - reasoning
+    context_window: 262144
+    pricing_note: Go allowance $8 (checked Oct 24, 2026)
+  - id: commandcode/xiaomi-mimo-v2-6-flash
+    provider: commandcode
+    model: xiaomi/mimo-v2.6-flash
+    display_name: MiMo V2.6 Flash
+    roles: []
+    usd_per_1k_input: 0.0001
+    usd_per_1k_output: 0.0003
+    usd_per_1k_cached_input: 1.0e-05
+    capabilities:
+    - tool_calling
+    - vision
+    context_window: 1000000
+    pricing_note: Promotional upstream pricing; Go allowance $6 (checked Oct 24, 2026)
+  - id: commandcode/xiaomi-mimo-v2-6-pro
+    provider: commandcode
+    model: xiaomi/mimo-v2.6-pro
+    display_name: MiMo V2.6 Pro
+    roles: []
+    usd_per_1k_input: 0.0003
+    usd_per_1k_output: 0.0009
+    usd_per_1k_cached_input: 3.0e-05
+    capabilities:
+    - tool_calling
+    context_window: 1000000
+    pricing_note: Promotional upstream pricing; Go allowance $6 (checked Oct 24, 2026)
+
+  # --- Z.AI PAAS API (optional; separate from OpenCode Go) ---
+  - id: zai-glm-5.3-flash
+    provider: zai
+    model: glm-5.3-flash
+    roles: []
+    usd_per_1k_input: 0.00015
+    usd_per_1k_output: 0.0005
+    capabilities: [tool_calling, vision, video, structured_output, reasoning]
+    context_window: 1000000
+  - id: zai-glm-5.3
+    provider: zai
+    model: GLM-5.3
+    roles: []
+    usd_per_1k_input: 0.0014
+    usd_per_1k_output: 0.0044
+    capabilities: [tool_calling, structured_output, reasoning]
+    context_window: 1000000
+  - id: zai-glm-5.3-flashx
+    provider: zai
+    model: glm-5.3-flashx
+    roles: []
+    usd_per_1k_input: 0.00037
+    usd_per_1k_output: 0.00125
+    usd_per_1k_cached_input: 0.000075
+    capabilities: [tool_calling, vision, video, structured_output, reasoning]
+    context_window: 1000000
+  - id: zai-glm-5.2
+    provider: zai
+    model: GLM-5.2
+    roles: []
+    usd_per_1k_input: 0.0014
+    usd_per_1k_output: 0.0044
+    capabilities: [tool_calling, structured_output, reasoning]
+    context_window: 1000000
+
+  # --- Cloudflare Workers AI (direct Cloudflare-hosted inference) ---
+  # Audited 2026-10-20 against Cloudflare catalog and live tool round trips.
+  # No external-provider AI Gateway routes. Rates below are USD per 1K tokens.
+  - id: cf-glm-5.3-flash
+    provider: cloudflare
+    model: '@cf/zai-org/glm-5.3-flash'
+    roles: []
+    usd_per_1k_input: 0.00015
+    usd_per_1k_output: 0.0005
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    request_capabilities:
+      reasoning_effort: true
+      thinking: false
+      preserve_reasoning: true
+      reasoning_efforts: [max, high, low]
+    context_window: 1048576
+    usd_per_1k_cached_input: 3.0e-05
+  - id: cf-glm-5.3
+    provider: cloudflare
+    model: '@cf/zai-org/glm-5.3'
+    roles: []
+    usd_per_1k_input: 0.0014
+    usd_per_1k_output: 0.0044
+    capabilities: [tool_calling, structured_output, reasoning]
+    request_capabilities:
+      reasoning_effort: true
+      thinking: false
+      preserve_reasoning: true
+      reasoning_efforts: [max, high, low]
+    context_window: 1048576
+    usd_per_1k_cached_input: 0.00026
+  - id: cf-deepseek-v4-flash
+    provider: cloudflare
+    model: '@cf/deepseek-ai/deepseek-v4-flash-0731'
+    roles: []
+    usd_per_1k_input: 0.00044
+    usd_per_1k_output: 0.00132
+    capabilities: [tool_calling, structured_output, reasoning]
+    context_window: 1048576
+    usd_per_1k_cached_input: 1.4e-05
+    request_capabilities:
+      reasoning_effort: true
+      preserve_reasoning: true
+      reasoning_efforts: [max, high, low, none]
+  - id: cf-deepseek-v4-pro
+    provider: cloudflare
+    model: '@cf/deepseek-ai/deepseek-v4-pro-0813'
+    roles: []
+    usd_per_1k_input: 0.00132
+    usd_per_1k_output: 0.00396
+    capabilities: [tool_calling, structured_output, reasoning]
+    context_window: 1048576
+    usd_per_1k_cached_input: 4.4e-05
+    request_capabilities:
+      reasoning_effort: true
+      preserve_reasoning: true
+      reasoning_efforts: [max, high, low, none]
+  - id: cf-qwen-3.8
+    provider: cloudflare
+    model: '@cf/qwen/qwen3.8-27b'
+    roles: []
+    usd_per_1k_input: 0.00045
+    usd_per_1k_output: 0.0032
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    context_window: 262144
+    usd_per_1k_cached_input: 5.0e-05
+    request_capabilities:
+      reasoning_effort: true
+      preserve_reasoning: true
+      reasoning_efforts: [xhigh, medium, low]
+  - id: cf-deepseek-v4.1-flash
+    provider: cloudflare
+    model: '@cf/deepseek-ai/deepseek-v4.1-flash-1017'
+    display_name: DeepSeek V4.1 Flash 1017
+    roles: []
+    capabilities: [tool_calling, vision, reasoning, structured_output]
+    context_window: 1048576
+    usd_per_1k_input: 0.0003
+    usd_per_1k_output: 0.0012
+    usd_per_1k_cached_input: 6.0e-06
+    request_capabilities:
+      preserve_reasoning: true
+      reasoning_effort: true
+      reasoning_efforts: [max, high, low, none]
+  - id: cf-kimi-k2.7-code
+    provider: cloudflare
+    model: '@cf/moonshotai/kimi-k2.7-code'
+    display_name: Kimi K2.7 Code
+    roles: []
+    capabilities: [tool_calling, vision, reasoning]
+    context_window: 262144
+    usd_per_1k_input: 0.00095
+    usd_per_1k_output: 0.004
+    usd_per_1k_cached_input: 0.00019
+    request_capabilities: {preserve_reasoning: true}
+  - id: cf-kimi-k2.6
+    provider: cloudflare
+    model: '@cf/moonshotai/kimi-k2.6'
+    display_name: Kimi K2.6
+    roles: []
+    capabilities: [tool_calling, vision, reasoning]
+    context_window: 262144
+    usd_per_1k_input: 0.00095
+    usd_per_1k_output: 0.004
+    usd_per_1k_cached_input: 0.00016
+    request_capabilities:
+      preserve_reasoning: true
+      reasoning_effort: true
+      reasoning_efforts: [high, none]
+  - id: cf-granite-4-micro
+    provider: cloudflare
+    model: '@cf/ibm-granite/granite-4.0-h-micro'
+    display_name: Granite 4.0 H Micro
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 131000
+    usd_per_1k_input: 0.000017
+    usd_per_1k_output: 0.000112
+  - id: cf-gemma-4-26b
+    provider: cloudflare
+    model: '@cf/google/gemma-4-26b-a4b-it'
+    display_name: Gemma 4 26B A4B
+    roles: []
+    capabilities: [tool_calling, vision, reasoning]
+    context_window: 256000
+    usd_per_1k_input: 0.0001
+    usd_per_1k_output: 0.0003
+    usd_per_1k_cached_input: 5.0e-05
+    request_capabilities: {preserve_reasoning: true}
+  - id: cf-glm-5.2
+    provider: cloudflare
+    model: '@cf/zai-org/glm-5.2'
+    display_name: GLM 5.2
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 262144
+    usd_per_1k_input: 0.0014
+    usd_per_1k_output: 0.0044
+    usd_per_1k_cached_input: 0.00026
+    request_capabilities:
+      preserve_reasoning: true
+      reasoning_effort: true
+      reasoning_efforts: [max, high, none]
+  - id: cf-glm-4.7-flash
+    provider: cloudflare
+    model: '@cf/zai-org/glm-4.7-flash'
+    display_name: GLM 4.7 Flash
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 131072
+    usd_per_1k_input: 6.05e-05
+    usd_per_1k_output: 0.0004
+    request_capabilities: {preserve_reasoning: true}
+  - id: cf-gpt-oss-20b
+    provider: cloudflare
+    model: '@cf/openai/gpt-oss-20b'
+    display_name: GPT OSS 20B
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 128000
+    usd_per_1k_input: 0.0002
+    usd_per_1k_output: 0.0003
+    request_capabilities:
+      preserve_reasoning: true
+      reasoning_effort: true
+      reasoning_efforts: [high, medium, low]
+  - id: cf-qwen3-30b-a3b
+    provider: cloudflare
+    model: '@cf/qwen/qwen3-30b-a3b-fp8'
+    display_name: Qwen3 30B A3B
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 32768
+    usd_per_1k_input: 5.09e-05
+    usd_per_1k_output: 0.000335
+    request_capabilities: {preserve_reasoning: true}
+  - id: cf-llama-4-scout
+    provider: cloudflare
+    model: '@cf/meta/llama-4-scout-17b-16e-instruct'
+    display_name: Llama 4 Scout
+    roles: []
+    capabilities: [tool_calling, vision]
+    context_window: 131000
+    usd_per_1k_input: 0.00027
+    usd_per_1k_output: 0.00085
+  - id: cf-llama-3.3-70b
+    provider: cloudflare
+    model: '@cf/meta/llama-3.3-70b-instruct-fp8-fast'
+    display_name: Llama 3.3 70B Fast
+    roles: []
+    capabilities: [tool_calling]
+    context_window: 24000
+    usd_per_1k_input: 0.000293
+    usd_per_1k_output: 0.002253
+  - id: cf-mistral-small-3.1
+    provider: cloudflare
+    model: '@cf/mistralai/mistral-small-3.1-24b-instruct'
+    display_name: Mistral Small 3.1 24B
+    roles: []
+    capabilities: [tool_calling, vision]
+    context_window: 128000
+    usd_per_1k_input: 0.000351
+    usd_per_1k_output: 0.000555
+  - id: cf-nemotron-3-120b
+    provider: cloudflare
+    model: '@cf/nvidia/nemotron-3-120b-a12b'
+    display_name: Nemotron 3 120B A12B
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 256000
+    usd_per_1k_input: 0.0005
+    usd_per_1k_output: 0.0015
+    request_capabilities: {preserve_reasoning: true}
+
+  # --- Gemini API ---
+  - id: gemini-argon
+    provider: gemini
+    model: gemini-4-argon
+    roles: []
+    # Introductory API rates through 2026-11-30; update when the offer ends.
+    usd_per_1k_input: 0.002
+    usd_per_1k_output: 0.01
+    usd_per_1k_cached_input: 0.0001
+    capabilities: [tool_calling, vision, video, structured_output, web_search, reasoning]
+    context_window: 1048576
+  - id: gemini-flash
+    provider: gemini
+    model: gemini-3.8-flash
+    roles: [fast_worker, monitor]
+    usd_per_1k_input: 0.00075
+    usd_per_1k_output: 0.00375
+    capabilities: [tool_calling, vision, video, structured_output, web_search]
+    context_window: 1000000
+  - id: gemini-pro
+    provider: gemini
+    model: gemini-3.1-pro-preview
+    roles: []
+    usd_per_1k_input: 0.00125
+    usd_per_1k_output: 0.005
+    capabilities: [tool_calling, vision, video, structured_output, web_search]
+    context_window: 1000000
+
+  # --- SiliconFlow (OpenAI-compat) ---
+  # - id: sf-kimi-k3
+  #   provider: siliconflow
+  #   model: moonshotai/Kimi-K3
+  #   roles: []
+  #   usd_per_1k_input: 0.003
+  #   usd_per_1k_output: 0.015
+  #   capabilities: [tool_calling, vision, structured_output, reasoning]
+  #   context_window: 1049000
+  # - id: sf-deepseek-v4-pro
+  #   provider: siliconflow
+  #   model: deepseek-ai/DeepSeek-V4-Pro-0813
+  #   roles: []
+  #   usd_per_1k_input: 0.0016
+  #   usd_per_1k_output: 0.003135
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 1049000
+  # - id: qwen-3.8
+  #   provider: siliconflow
+  #   model: Qwen/Qwen3.8-2.4T-A95B
+  #   roles: []
+  #   usd_per_1k_input: 0.002
+  #   usd_per_1k_output: 0.006
+  #   capabilities: [tool_calling, structured_output, reasoning]
+  #   context_window: 262144
+
+  # --- OpenAI API key ---
+  # Eligible for the organization's data-sharing allowance when enabled.
+  # Keep standard prices: eligibility/remaining daily tokens are account-wide,
+  # and exhausting the complimentary allowance does not trigger API failover.
+  - id: gpt-6-astra
+    provider: openai
+    model: gpt-6-astra
+    roles: []
+    usd_per_1k_input: 0.01
+    usd_per_1k_output: 0.05
+    context_window: 1050000
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+  - id: gpt-6.1-sol
+    provider: openai
+    model: gpt-6.1-sol
+    roles: []
+    usd_per_1k_input: 0.002
+    usd_per_1k_output: 0.01
+    context_window: 1050000
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+  - id: gpt-6.1-terra
+    provider: openai
+    model: gpt-6.1-terra
+    roles: []
+    usd_per_1k_input: 0.001
+    usd_per_1k_output: 0.005
+    context_window: 1050000
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+  - id: gpt-6-luna
+    provider: openai
+    model: gpt-6-luna
+    roles: []
+    usd_per_1k_input: 0.0001
+    usd_per_1k_output: 0.0004
+    context_window: 1050000
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+  - id: gpt-5.4
+    provider: openai
+    model: gpt-5.4
+    roles: []
+    usd_per_1k_input: 0.0025
+    usd_per_1k_output: 0.015
+    usd_per_1k_cached_input: 0.00025
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    request_capabilities: {reasoning_efforts: [none, low, medium, high, xhigh]}
+    context_window: 1050000
+    pricing_note: "Standard API prices; eligible shared traffic may receive complimentary daily tokens."
+  - id: gpt-5.2
+    provider: openai
+    model: gpt-5.2
+    roles: []
+    usd_per_1k_input: 0.00175
+    usd_per_1k_output: 0.014
+    usd_per_1k_cached_input: 0.000175
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    request_capabilities: {reasoning_efforts: [none, low, medium, high, xhigh]}
+    context_window: 400000
+    pricing_note: "Standard API prices; shares the larger-model daily allowance with GPT-5.4."
+  - id: gpt-5.4-mini
+    provider: openai
+    model: gpt-5.4-mini
+    roles: []
+    usd_per_1k_input: 0.00075
+    usd_per_1k_output: 0.0045
+    usd_per_1k_cached_input: 0.000075
+    capabilities: [tool_calling, vision, structured_output, reasoning]
+    request_capabilities: {reasoning_efforts: [none, low, medium, high, xhigh]}
+    context_window: 400000
+    pricing_note: "Standard API prices; eligible shared traffic uses the separate smaller-model daily allowance."
+  - id: gpt-5.6-sol
+    provider: openai
+    model: gpt-5.6-sol
+    roles: []
+    usd_per_1k_input: 0.005
+    usd_per_1k_output: 0.03
+    capabilities: [tool_calling, vision, structured_output, reasoning, web_search]
+    context_window: 1050000
+  - id: gpt-codex-app
+    provider: openai-codex-app
+    model: gpt-5.6-sol
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 1050000
+  # Public models exposed by the local Codex app-server session.  These use
+  # ChatGPT/Codex OAuth (not OPENAI_API_KEY). Kageha executes tool calls
+  # through its own permissions and runtime.
+  - id: gpt-codex-6.1-terra
+    provider: openai-codex-app
+    model: gpt-6.1-terra
+    roles: []
+    capabilities: [tool_calling, reasoning]
+  - id: gpt-codex-6.1-sol
+    provider: openai-codex-app
+    model: gpt-6.1-sol
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    request_capabilities: {reasoning_efforts: [low, medium, high, xhigh, max, ultra]}
+  - id: gpt-codex-6-sol
+    provider: openai-codex-app
+    model: gpt-6-sol
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    request_capabilities: {reasoning_efforts: [low, medium, high, xhigh, max, ultra]}
+  - id: gpt-codex-6-luna
+    provider: openai-codex-app
+    model: gpt-6-luna
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    request_capabilities: {reasoning_efforts: [low, medium, high, xhigh, max]}
+  - id: gpt-codex-astra
+    provider: openai-codex-app
+    model: gpt-6-astra
+    roles: []
+    capabilities: [tool_calling, reasoning]
+  - id: gpt-codex-terra
+    provider: openai-codex-app
+    model: gpt-5.6-terra
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 1050000
+  - id: gpt-codex-luna
+    provider: openai-codex-app
+    model: gpt-5.6-luna
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 1050000
+  - id: gpt-codex-5.5
+    provider: openai-codex-app
+    model: gpt-5.5
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 1050000
+  - id: gpt-codex-5.4
+    provider: openai-codex-app
+    model: gpt-5.4
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 1050000
+  - id: gpt-codex-5.4-mini
+    provider: openai-codex-app
+    model: gpt-5.4-mini
+    roles: []
+    capabilities: [tool_calling, reasoning]
+    context_window: 400000
+  - id: gpt-5.6-terra
+    provider: openai
+    model: gpt-5.6-terra
+    roles: []
+    usd_per_1k_input: 0.002
+    usd_per_1k_output: 0.012
+    capabilities: [tool_calling, vision, structured_output, reasoning, web_search]
+    context_window: 1050000
+  - id: gpt-5.6-luna
+    provider: openai
+    model: gpt-5.6-luna
+    roles: []
+    usd_per_1k_input: 0.0002
+    usd_per_1k_output: 0.0012
+    capabilities: [tool_calling, vision, structured_output, reasoning, web_search]
+    context_window: 1050000
+  - id: gpt-5.5
+    provider: openai
+    model: gpt-5.5
+    roles: []
+    usd_per_1k_input: 0.005
+    usd_per_1k_output: 0.02
+    capabilities: [tool_calling, vision, structured_output, reasoning, web_search]
+    context_window: 1050000
+
+  # --- Anthropic API key ---
+  - id: claude-fable
+    provider: anthropic
+    model: claude-fable-5
+    roles: []
+    usd_per_1k_input: 0.01
+    usd_per_1k_output: 0.05
+    capabilities: [tool_calling, vision, structured_output]
+    context_window: 1000000
+  - id: claude-opus
+    provider: anthropic
+    model: claude-opus-5
+    roles: []
+    usd_per_1k_input: 0.005
+    usd_per_1k_output: 0.025
+    capabilities: [tool_calling, vision, structured_output]
+    context_window: 1000000
+  - id: claude-sonnet
+    provider: anthropic
+    model: claude-sonnet-5
+    roles: []
+    usd_per_1k_input: 0.002
+    usd_per_1k_output: 0.01
+    capabilities: [tool_calling, vision, structured_output]
+    context_window: 1000000
+
+# Media capability providers (image / tts / stt / video). Pluggable: add a
+# provider entry here + register a MediaAdapter for its protocol. Selection is
+# per-capability (auto = first ready provider in this declared order).
+media_providers:
+  cloudflare:
+    protocol: cloudflare_workers_ai
+    api_key_env: CLOUDFLARE_API_TOKEN
+    account_env: CLOUDFLARE_ACCOUNT_ID
+    capabilities:
+      image:
+        models: ["@cf/black-forest-labs/flux-1-schnell", "@cf/leonardo/lucid-origin"]
+        default: "@cf/black-forest-labs/flux-1-schnell"
+      vision:
+        models: ["@cf/zai-org/glm-5.3-flash", "@cf/qwen/qwen3.8-27b"]
+        default: "@cf/zai-org/glm-5.3-flash"
+      tts:
+        models: ["@cf/deepgram/aura-2-en", "@cf/myshell-ai/melotts"]
+        default: "@cf/deepgram/aura-2-en"
+      stt:
+        models: ["@cf/openai/whisper-large-v3-turbo"]
+        default: "@cf/openai/whisper-large-v3-turbo"
+  fal:
+    protocol: fal
+    api_key_env: FAL_KEY
+    capabilities:
+      image:
+        models: ["fal-ai/flux/schnell", "fal-ai/flux/dev"]
+        default: "fal-ai/flux/schnell"
+  # Gemini TTS/STT (reuses GEMINI_API_KEY). Distinct protocols so one provider
+  # name can offer both capabilities via separate adapters.
+  gemini:
+    protocol: gemini_tts
+    api_key_env: GEMINI_API_KEY
+    capabilities:
+      tts:
+        models: ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts", "gemini-3.1-flash-tts-preview"]
+        default: "gemini-3.8-flash-lite-tts"
+  gemini-stt:
+    protocol: gemini_stt
+    api_key_env: GEMINI_API_KEY
+    capabilities:
+      stt:
+        models: ["gemini-3.6-flash"]
+        default: "gemini-3.6-flash"
+  openai:
+    protocol: openai_audio
+    api_key_env: OPENAI_API_KEY
+    capabilities:
+      stt:
+        models: ["whisper-1"]
+        default: "whisper-1"
+  # Optional local voice cloning. Explicit selection only; never used by Auto.
+  audio8:
+    protocol: audio8_local
+    auto_select: false
+    voice_cloning: true
+    capabilities:
+      tts:
+        models: ["Edge0/Audio8-TTS-Realistic-0.6b"]
+        default: "Edge0/Audio8-TTS-Realistic-0.6b"
+  # Future providers (register a MediaAdapter for the protocol to activate):
+  # elevenlabs:
+  #   protocol: elevenlabs
+  #   api_key_env: ELEVENLABS_API_KEY
+  #   capabilities: { tts: { models: [eleven_turbo_v2_5], default: eleven_turbo_v2_5 } }
+  # openai:
+  #   protocol: openai_audio
+  #   api_key_env: OPENAI_API_KEY
+  #   capabilities:
+  #     tts: { models: [gpt-4o-mini-tts], default: gpt-4o-mini-tts }
+  #     stt: { models: [whisper-1], default: whisper-1 }
+
+embedding:
+  provider: gemini
+  model: gemini-embedding-001
+  dimensions: 768
+
+voice:
+  provider: gemini
+  model: gemini-3.8-flash-lite-tts
+  voice: Kore
+
+# OpenCode Go and SiliconFlow are disabled; use Z.AI GLM primaries in repo defaults.
+# Complimentary-eligible OpenAI models are ordered fallbacks after the active primary.
+# Other OpenAI API models remain selectable manually against account credit.
+# General work: GPT-5.4 -> GPT-5.2 -> GPT-5.4 mini; fast roles: mini only.
+# The daily allowance is not an API quota; this order handles request failures.
+# Explicit model pins and user-owned fallback policy take precedence.
+roles:
+  default: [zai-glm-5.3-flash, gpt-5.4, gpt-5.2, gpt-5.4-mini, zai-glm-5.3-flashx, gemini-flash, claude-sonnet, cf-glm-5.3-flash, cf-deepseek-v4-flash, cf-qwen-3.8]
+  planning: [zai-glm-5.3, gpt-5.4, gpt-5.2, gpt-5.4-mini, gemini-pro, claude-fable, cf-glm-5.3, cf-deepseek-v4-pro]
+  fast_worker: [zai-glm-5.3-flash, gpt-5.4-mini, zai-glm-5.3-flashx, gemini-flash, cf-glm-5.3-flash, cf-deepseek-v4-flash]
+  monitor: [zai-glm-5.3-flash, gpt-5.4-mini, zai-glm-5.3-flashx, gemini-flash, cf-glm-5.3-flash]
+  tool_calling: [zai-glm-5.3-flash, gpt-5.4, gpt-5.2, gpt-5.4-mini, zai-glm-5.3-flashx, gemini-flash, claude-sonnet, cf-glm-5.3-flash, cf-deepseek-v4-flash, cf-qwen-3.8]
+  coding: [zai-glm-5.3-flash, gpt-5.4, gpt-5.2, gpt-5.4-mini, zai-glm-5.3-flashx, gemini-flash, claude-opus, cf-glm-5.3-flash, cf-deepseek-v4-pro]

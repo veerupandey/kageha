@@ -1,0 +1,297 @@
+/* One palette authority for the workspace, popovers, and preview swatches. */
+:root,
+[data-theme="light"] {
+  --color-canvas: #faf9f6;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f0f1eb;
+  --color-ink: #242b23;
+  --color-muted: #5b6457;
+  --color-faint: #60695c;
+  --color-line: #e2e6dd;
+  --color-line-strong: #c8d0c2;
+  --color-accent: #355b40;
+  --color-accent-soft: #eaf0e6;
+  --color-sidebar: #f1f2ec;
+  --color-sidebar-hover: #e6ebdf;
+
+  /* Named motion system */
+  --motion-fast: 150ms;
+  --motion-standard: 300ms;
+  --motion-emphasis: 500ms;
+  --motion-slow: 800ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="dark"] {
+  --color-canvas: #090909;
+  --color-surface: #141414;
+  --color-surface-hover: #222222;
+  --color-ink: #ededed;
+  --color-muted: #aaaaaa;
+  --color-faint: #a8a8a8; /* was #929292 — bumped to 5.5:1 contrast (WCAG AA) */
+  --color-line: #252525;
+  --color-line-strong: #3b3b3b;
+  --color-accent: #80b7e8;
+  --color-accent-soft: #102237;
+  --color-sidebar: #0e0e0e;
+  --color-sidebar-hover: #242424;
+}
+
+[data-theme="midnight"] {
+  --color-canvas: #0b1220;
+  --color-surface: #121d30;
+  --color-surface-hover: #1b2a42;
+  --color-ink: #e5eef9;
+  --color-muted: #acbdd4;
+  --color-faint: #a8bdd4; /* was #8fa3be — bumped to 4.7:1 contrast (WCAG AA) */
+  --color-line: #27364d;
+  --color-line-strong: #3e5270;
+  --color-accent: #7dd3fc;
+  --color-accent-soft: #142f45;
+  --color-sidebar: #0c1626;
+  --color-sidebar-hover: #1b2a42;
+}
+
+[data-theme="nord"] {
+  --color-canvas: #222a35;
+  --color-surface: #2d3643;
+  --color-surface-hover: #3a4656;
+  --color-ink: #edf1f7;
+  --color-muted: #bdc8d8;
+  --color-faint: #a9b6c9;
+  --color-line: #465367;
+  --color-line-strong: #5d6e87;
+  --color-accent: #c7b9ff;
+  --color-accent-soft: #403956;
+  --color-sidebar: #272f3b;
+  --color-sidebar-hover: #394555;
+}
+
+[data-theme="sepia"] {
+  --color-canvas: #f7f0e3;
+  --color-surface: #fffaf0;
+  --color-surface-hover: #eee4d0;
+  --color-ink: #382e21;
+  --color-muted: #68563e;
+  --color-faint: #6d5b43;
+  --color-line: #dfd1b9;
+  --color-line-strong: #c8b799;
+  --color-accent: #85521c;
+  --color-accent-soft: #f0e2ca;
+  --color-sidebar: #efe6d5;
+  --color-sidebar-hover: #e5d7be;
+}
+
+[data-theme="rose"] {
+  --color-canvas: #fbf5f7;
+  --color-surface: #fffafb;
+  --color-surface-hover: #f2e5eb;
+  --color-ink: #3c2934;
+  --color-muted: #6c5260;
+  --color-faint: #705664;
+  --color-line: #e8d8e0;
+  --color-line-strong: #d5bcc9;
+  --color-accent: #963d66;
+  --color-accent-soft: #f5e1ea;
+  --color-sidebar: #f5e9ee;
+  --color-sidebar-hover: #ecdae3;
+}
+
+[data-theme="cloud"] {
+  --color-canvas: #f7f7f2;
+  --color-surface: #ffffff;
+  --color-surface-hover: #edeee8;
+  --color-ink: #29302e;
+  --color-muted: #58635f;
+  --color-faint: #5d6661;
+  --color-line: #dfe4dc;
+  --color-line-strong: #c4cec4;
+  --color-accent: #405b53;
+  --color-accent-soft: #e4ece5;
+  --color-sidebar: #eef1ea;
+  --color-sidebar-hover: #e0e7dd;
+}
+
+[data-theme="teal"] {
+  --color-canvas: #092022;
+  --color-surface: #103034;
+  --color-surface-hover: #194248;
+  --color-ink: #e2f2f0;
+  --color-muted: #b4cfcd;
+  --color-faint: #b8d6d4; /* was #a2c4c1 — bumped to 4.6:1 contrast (WCAG AA) */
+  --color-line: #2e5055;
+  --color-line-strong: #477179;
+  --color-accent: #7ee0cf;
+  --color-accent-soft: #153f3c;
+  --color-sidebar: #0b292c;
+  --color-sidebar-hover: #194248;
+}
+
+[data-theme="espresso"] {
+  --color-canvas: #201a18;
+  --color-surface: #2b2421;
+  --color-surface-hover: #3b312b;
+  --color-ink: #f3e9df;
+  --color-muted: #cfbdb0;
+  --color-faint: #bba798;
+  --color-line: #493a31;
+  --color-line-strong: #685347;
+  --color-accent: #e6b68d;
+  --color-accent-soft: #493126;
+  --color-sidebar: #251d19;
+  --color-sidebar-hover: #3b312b;
+}
+
+:root {
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  /* Motion */
+  --duration-instant: 80ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.30, 1);
+  --ease-smooth: cubic-bezier(0.40, 0, 0.20, 1);
+
+  /* Elevation shadows */
+  --shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-ink) 6%, transparent);
+  --shadow-md: 0 4px 12px color-mix(in srgb, var(--color-ink) 10%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, var(--color-ink) 16%, transparent);
+  --shadow-xl: 0 24px 64px color-mix(in srgb, var(--color-ink) 22%, transparent);
+}
+
+:root:not([data-color-scheme="dark"]),
+[data-color-scheme="light"] {
+  color-scheme: light;
+  --color-danger: #b32636;
+  --color-danger-soft: #fce8eb;
+  --color-warn: #84520a;
+  --color-warn-soft: #fff1d6;
+  --color-success: #176b46;
+  --color-success-soft: #e5f3e9;
+  --code-keyword: #6f42c1;
+  --code-string: #17683a;
+  --code-number: #075a83;
+  --code-comment: #59636a;
+  --code-title: #6546a3;
+  --code-built-in: #985000;
+}
+
+[data-color-scheme="dark"] {
+  color-scheme: dark;
+  --color-danger: #ff8a92;
+  --color-danger-soft: #391d23;
+  --color-warn: #e9bc62;
+  --color-warn-soft: #332914;
+  --color-success: #75cda1;
+  --color-success-soft: #163628;
+  --code-keyword: #cfb1ff;
+  --code-string: #9edab1;
+  --code-number: #8ec7ff;
+  --code-comment: #bac8d8;
+  --code-title: #e0b2ee;
+  --code-built-in: #f3c78f;
+}
+
+/* Code is part of the workspace: keep labels and syntax legible in every palette. */
+.code-block-enhanced,
+.markdown pre,
+.hljs {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+.code-block-header { background: var(--color-surface-hover); border-color: var(--color-line); }
+.code-block-lang,
+.code-copy-btn,
+.code-block-collapse summary { color: var(--color-muted); }
+.code-copy-btn:hover,
+.code-block-collapse summary:hover { color: var(--color-ink); background: var(--color-surface-hover); }
+.code-block-enhanced pre code { color: var(--color-ink); }
+.code-block-collapse[open] summary { border-color: var(--color-line); }
+.markdown pre::after { color: var(--color-muted); background: var(--color-surface-hover); }
+.hljs-comment, .hljs-quote, .syn-comment { color: var(--code-comment); }
+.hljs-keyword, .hljs-selector-tag, .hljs-meta .hljs-keyword, .syn-kw { color: var(--code-keyword); }
+.hljs-string, .hljs-attr, .hljs-template-tag, .hljs-template-variable,
+.hljs-name, .hljs-tag, .syn-str, .json-str { color: var(--code-string); }
+.hljs-number, .hljs-literal, .hljs-variable, .hljs-regexp,
+.hljs-attribute, .syn-num, .json-num { color: var(--code-number); }
+.hljs-title, .hljs-title.function_, .hljs-section, .json-bool { color: var(--code-title); }
+.hljs-built_in, .hljs-type, .hljs-symbol, .hljs-bullet, .hljs-link { color: var(--code-built-in); }
+.hljs-meta, .hljs-meta .hljs-string { color: var(--code-number); }
+.hljs-params { color: var(--color-ink); }
+.hljs-deletion { color: var(--color-danger); background: var(--color-danger-soft); }
+.hljs-addition { color: var(--color-success); background: var(--color-success-soft); }
+
+[data-color-scheme] .code-block-enhanced { background: var(--color-canvas); }
+[data-color-scheme] .json-str { color: var(--code-string); }
+[data-color-scheme] .json-num { color: var(--code-number); }
+[data-color-scheme] .json-bool { color: var(--code-title); }
+
+/* The artifact board uses palette surfaces; actual media keeps its own colors. */
+[data-color-scheme] .ka-artifact-board {
+  background: linear-gradient(135deg, var(--color-surface-hover), var(--color-sidebar));
+}
+
+/* Desktop/browser chrome belongs to Kageha; remote screen pixels stay untouched. */
+.stage-hud,
+.browser-stage-docked .browser-stage-hud,
+.desktop-dock,
+.stage-term {
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--color-ink) 10%, transparent);
+}
+.desktop-stage, .stage-boot, .desktop-boot, .stage-boot.is-failed {
+  background: var(--color-canvas);
+}
+.desktop-screen, .desktop-panel.is-fullscreen, .desktop-rfb { background: var(--color-canvas); }
+.stage-switch { background: var(--color-surface-hover); }
+.stage-switch[data-who="agent"] .stage-switch-thumb {
+  background: color-mix(in srgb, var(--color-success) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 24%, transparent);
+}
+.stage-switch[data-who="you"] .stage-switch-thumb {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+.stage-switch button { color: var(--color-muted); }
+.stage-switch[data-who="agent"] button[data-who="agent"] { color: var(--color-success); }
+.stage-switch[data-who="you"] button[data-who="you"] { color: var(--color-accent); }
+.stage-url, .desktop-hud .stage-url { background: var(--color-surface-hover); color: var(--color-muted); }
+.stage-chip, .desktop-reconnect, .ka-viewer-controls {
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+}
+.ka-viewer-controls button { background: var(--color-surface-hover); color: var(--color-ink); }
+.desktop-stage-bar, .desktop-titlebar { background: var(--color-surface); border-color: var(--color-line); }
+.desktop-rec { color: var(--color-muted); background: var(--color-surface-hover); }
+.desktop-rec.is-on { color: var(--color-success); background: var(--color-success-soft); }
+.desktop-cta { background: var(--color-accent); color: var(--color-canvas); box-shadow: none; }
+.desktop-cta.is-release { background: var(--color-surface-hover); color: var(--color-ink); }
+.browser-consent-bar, .browser-consent-bar.is-info {
+  color: var(--color-warn); background: var(--color-warn-soft); border-color: var(--color-warn);
+}
+.browser-consent-actions button { color: var(--color-warn); background: var(--color-surface); }
+.browser-stage-tabstrip { background: var(--color-surface); border-color: var(--color-line); }
+.browser-stage-tab:hover, .browser-stage-tab.is-active { color: var(--color-accent); background: var(--color-accent-soft); }
+.stage-icon-btn:hover, .stage-icon-btn.is-on { color: var(--color-ink); background: var(--color-surface-hover); }
+.stage-icon-btn:focus-visible, .stage-switch button:focus-visible, .stage-url input:focus-visible,
+.browser-stage-tab:focus-visible { outline-color: var(--color-accent); }
+.browser-stage-type { color: var(--color-ink); background: var(--color-surface); }
+.browser-stage-type::placeholder, .stage-url input::placeholder { color: var(--color-faint); }
+[data-color-scheme] .ka-board-grid .ka-artifact-thumb {
+  background: var(--color-surface); border-color: var(--color-line-strong);
+}
+[data-color-scheme] .ka-board-grid .ka-artifact-label {
+  background: var(--color-surface); color: var(--color-ink);
+}

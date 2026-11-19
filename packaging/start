@@ -1,0 +1,95 @@
+#!/bin/sh
+# Foreground launcher for the extracted release.
+set -eu
+umask 077
+bundle=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+data=${KAGEHA_DATA_DIR:-"$HOME/.kageha-local"}
+case "$data" in /*) ;; *) echo 'KAGEHA_DATA_DIR must be an absolute path.' >&2; exit 2 ;; esac
+read_token() {
+  if [ -n "${KAGEHA_SERVER_TOKEN:-}" ]; then printf '%s' "$KAGEHA_SERVER_TOKEN"; return; fi
+  if [ ! -s "$data/state/server.token" ]; then echo 'Start Kageha first to create your login token.' >&2; return 1; fi
+  cat "$data/state/server.token"
+}
+port=${KAGEHA_WEBUI_PORT:-8788}
+if [ "$(basename "$0")" = 'Sign in.command' ]; then
+  # The user explicitly opened this shortcut to copy their local login token.
+  token=$(read_token)
+  printf '%s' "$token" | pbcopy
+  open "http://127.0.0.1:$port/login"
+  echo 'Paste the copied token into the sign-in form.'
+  exit
+fi
+case "${1:-start}" in
+  token)
+    read_token
+    printf '\n'
+    exit ;;
+  start) ;;
+  *) echo 'Usage: ./start [token]' >&2; exit 2 ;;
+esac
+export KAGEHA_HOME=${KAGEHA_HOME:-"$data/home"}
+export KAGEHA_MODEL_ENV_FILE=${KAGEHA_MODEL_ENV_FILE:-"$data/model.env"}
+if [ -x "$bundle/bin/kageha-linux-session" ]; then
+  export KAGEHA_LINUX_SESSION_BIN=${KAGEHA_LINUX_SESSION_BIN:-"$bundle/bin/kageha-linux-session"}
+fi
+mkdir -p "$data/workspace" "$KAGEHA_HOME"
+# Linux deployments use a private file key. Install it atomically so restarts
+# and concurrent launches cannot rotate an existing credential vault key.
+if [ "$(uname -s)" = Linux ] && [ -z "${KAGEHA_CREDENTIAL_KEY_FILE:-}" ]; then
+  export KAGEHA_CREDENTIAL_KEY_FILE="$data/vault.key"
+  if [ ! -e "$KAGEHA_CREDENTIAL_KEY_FILE" ]; then
+    tmp=$(mktemp "$data/.vault.XXXXXXXX")
+    trap 'rm -f "$tmp"' EXIT
+    dd if=/dev/urandom of="$tmp" bs=32 count=1 2>/dev/null
+    ln "$tmp" "$KAGEHA_CREDENTIAL_KEY_FILE" 2>/dev/null || [ -f "$KAGEHA_CREDENTIAL_KEY_FILE" ]
+    rm -f "$tmp"
+    trap - EXIT
+  fi
+fi
+if [ "$(uname -s)" = Darwin ]; then
+  printf 'Double-click Sign in.command to copy your login token and open your browser.\n'
+fi
+printf 'Open http://127.0.0.1:%s when the server is listening.\n' "$port"
+printf 'To sign in, run ./start token in a second terminal in the extracted folder.\n'
+printf 'Choose your provider in Settings → Models. Press Ctrl-C here to stop Kageha.\n'
+cd "$data/workspace"
+set -- "$bundle/bin/kageha" up --workspace "$data/workspace" --state-dir "$data/state" --bind "127.0.0.1:$port"
+if [ -n "${KAGEHA_BROWSER_STATE_DIR:-}" ] || [ ! -x "$bundle/bin/kageha-browser" ]; then
+  exec "$@"
+fi
+
+export KAGEHA_BROWSER_STATE_DIR="$data/browser"
+mkdir -p "$KAGEHA_BROWSER_STATE_DIR"
+chromium=${KAGEHA_LINUX_CHROMIUM:-${KAGEHA_CHROMIUM:-}}
+if [ -z "$chromium" ]; then
+  for candidate in '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' /usr/bin/google-chrome /usr/bin/chromium /usr/bin/chromium-browser; do
+    if [ -x "$candidate" ]; then chromium=$candidate; break; fi
+  done
+fi
+browser_watch() {
+  browser_pid=
+  trap 'if [ -n "$browser_pid" ]; then kill "$browser_pid" 2>/dev/null || :; wait "$browser_pid" 2>/dev/null || :; fi; exit 0' INT TERM HUP
+  set -- "$bundle/bin/kageha-browser" --state-dir "$KAGEHA_BROWSER_STATE_DIR" --instance-id release --application-id kageha --standalone on
+  if [ -n "$chromium" ]; then set -- "$@" --chromium "$chromium"; fi
+  while :; do
+    "$@" &
+    browser_pid=$!
+    wait "$browser_pid" || :
+    browser_pid=
+    sleep 2
+  done
+}
+browser_watch &
+watch_pid=$!
+"$@" &
+host_pid=$!
+cleanup() {
+  kill "$host_pid" "$watch_pid" 2>/dev/null || :
+  wait "$host_pid" 2>/dev/null || :
+  wait "$watch_pid" 2>/dev/null || :
+}
+trap 'cleanup; exit 143' INT TERM HUP
+result=0
+wait "$host_pid" || result=$?
+cleanup
+exit "$result"

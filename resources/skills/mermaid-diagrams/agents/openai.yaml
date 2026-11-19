@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mermaid diagrams"
+  short_description: "Create clear Mermaid architecture and flow diagrams"
+  default_prompt: "Use the Mermaid diagrams skill to choose and create a clear diagram for this explanation."

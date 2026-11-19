@@ -1,0 +1,38 @@
+[package]
+name = "kageha-runtime-service"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+kageha-policy = { path = "../kageha-policy" }
+kageha-contracts = { path = "../kageha-contracts" }
+kageha-runtime = { path = "../kageha-runtime" }
+kageha-runtime-store = { path = "../kageha-runtime-store" }
+kageha-models = { path = "../kageha-models" }
+kageha-credentials = { path = "../kageha-credentials", features = ["client"] }
+libc = "0.2"
+serde.workspace = true
+serde_json.workspace = true
+axum.workspace = true
+tokio.workspace = true
+sha2.workspace = true
+futures-util = "0.3"
+kageha-tools = { path = "../kageha-tools" }
+kageha-mcp = { path = "../kageha-mcp" }
+kageha-services = { path = "../kageha-services" }
+kageha-memory = { path = "../kageha-memory" }
+kageha-workspace = { path = "../kageha-workspace" }
+kageha-agents = { path = "../kageha-agents", features = ["sqlite"] }
+kageha-workflow = { path = "../kageha-workflow", features = ["sqlite"] }
+kageha-skills = { path = "../kageha-skills" }
+kageha-knowledge = { path = "../kageha-knowledge" }
+
+reqwest = { workspace = true, features = ["blocking"] }
+uuid.workspace = true
+
+kageha-execution = { path = "../kageha-execution" }
+tempfile = "3"
+
+[dev-dependencies]
+rusqlite.workspace = true

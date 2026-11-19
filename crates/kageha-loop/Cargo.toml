@@ -1,0 +1,81 @@
+[package]
+name = "kageha-loop"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[features]
+default = ["computer"]
+computer = ["dep:kageha-computer"]
+zvec = ["kageha-memory/zvec"]
+
+[dependencies]
+kageha-agents = { path = "../kageha-agents", features = ["sqlite"] }
+kageha-skills = { path = "../kageha-skills" }
+kageha-knowledge = { path = "../kageha-knowledge" }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+kageha-migration = { path = "../kageha-migration" }
+kageha-session-client = { path = "../kageha-session-client" }
+kageha-integrations = { path = "../kageha-integrations" }
+kageha-browser-client = { path = "../kageha-browser-client" }
+kageha-browser-decisions = { path = "../kageha-browser-decisions" }
+hmac = "0.12"
+ring = "0.17"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+sha2 = "0.10"
+tiny_http = "0.12"
+reqwest = { workspace = true, features = ["blocking"] }
+fs2 = "0.4"
+libc = "0.2"
+data-encoding = "2"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+kageha-contracts = { path = "../kageha-contracts" }
+kageha-memory = { path = "../kageha-memory" }
+kageha-services = { path = "../kageha-services" }
+tokio = { workspace = true }
+kageha-runtime = { path = "../kageha-runtime" }
+
+kageha-computer = { path = "../kageha-computer", default-features = false, optional = true }
+kageha-runtime-store = { path = "../kageha-runtime-store" }
+
+uuid = { workspace = true }
+zeroize = "1"
+
+kageha-models = { path = "../kageha-models" }
+kageha-credentials = { path = "../kageha-credentials", features = ["client"] }
+async-trait.workspace = true
+
+kageha-policy = { path = "../kageha-policy" }
+
+kageha-mcp = { path = "../kageha-mcp" }
+
+kageha-tools = { path = "../kageha-tools" }
+
+kageha-workspace = { path = "../kageha-workspace" }
+
+kageha-runtime-service = { path = "../kageha-runtime-service" }
+
+kageha-execution = { path = "../kageha-execution" }
+kageha-learning = { path = "../kageha-learning" }
+# Fresh temporary Task_Workspaces for learned skills' tests (ui_skill_promotion.rs).
+tempfile = "3"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "webp"] }
+
+[dev-dependencies]
+tempfile = "3"
+proptest = "1"
+# ScriptedModel for the audited-session regression test (src/audited_session_tests.rs).
+kageha-runtime = { path = "../kageha-runtime", features = ["test-support"] }
+
+[dependencies.kageha-workflow]
+path = "../kageha-workflow"
+features = ["sqlite"]
+
+[dependencies.url]
+version = "2"
+[dependencies.serde_yaml]
+version = "0.9"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Browser
+Comment=Chromium on this computer
+Exec=kageha-browser
+Terminal=false
+Categories=Network;WebBrowser;
+Icon=chromium

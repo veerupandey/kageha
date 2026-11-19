@@ -169,3 +169,79 @@ fn openai_decisions_wire_and_provider_confidence_are_preserved() {
     assert_eq!(result.answers["q"].probability(), 0.97);
     server.join().unwrap();
 }
+
+#[test]
+fn gemini_uses_the_decisions_endpoint_and_preserves_provider_scores() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = kageha_models::catalog::completion_url(
+        &format!("http://{}/v1beta", listener.local_addr().unwrap()),
+        "gemini_decisions",
+    )
+    .unwrap();
+    let server = std::thread::spawn(move || {
+        let (mut socket, _) = listener.accept().unwrap();
+        let mut reader = BufReader::new(&mut socket);
+        let mut request_line = String::new();
+        reader.read_line(&mut request_line).unwrap();
+        assert_eq!(request_line.trim(), "POST /v1beta/decisions HTTP/1.1");
+        let mut headers = BTreeMap::new();
+        for line in reader.by_ref().lines() {
+            let line = line.unwrap();
+            if line.is_empty() {
+                break;
+            }
+            let (name, value) = line.split_once(':').unwrap();
+            headers.insert(name.to_lowercase(), value.trim().to_owned());
+        }
+        assert_eq!(headers["x-goog-api-key"], "fixture");
+        assert!(!headers.contains_key("authorization"));
+        let mut bytes = vec![0; headers["content-length"].parse().unwrap()];
+        reader.read_exact(&mut bytes).unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            body,
+            json!({"model":"gemini-decision-1","input":"{\"visible\":true}",
+            "questions":{"q":{"type":"choice","instructions":"Is the field visible?",
+                "criteria":{"yes":"Visible","no":"Hidden"}}}})
+        );
+        let reply = json!({"answers":{"q":{"type":"choice","choice":"yes","confidence":0.79,
+            "probabilities":{"yes":0.95,"no":0.05}}},"usage":{"total_input_tokens":21,"total_output_tokens":0}}).to_string();
+        write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",reply.len(),reply).unwrap();
+    });
+    let backend = HttpDecisions::new(
+        HttpModel::new(vec![Provider {
+            url,
+            key: "fixture".into(),
+            model: "gemini-decision-1".into(),
+            protocol: "gemini_decisions".into(),
+        }])
+        .unwrap(),
+    )
+    .unwrap();
+    let request = Request {
+        state: json!({"visible":true}),
+        questions: BTreeMap::from([(
+            "q".into(),
+            Question {
+                instructions: "Is the field visible?".into(),
+                criteria: BTreeMap::from([
+                    ("yes".into(), "Visible".into()),
+                    ("no".into(), "Hidden".into()),
+                ]),
+            },
+        )]),
+    };
+    let result = backend
+        .decide(
+            &request,
+            &Control {
+                cancelled: &AtomicBool::new(false),
+                deadline: None,
+            },
+        )
+        .unwrap();
+    server.join().unwrap();
+    assert_eq!(result.answers["q"].confidence, Some(0.79));
+    assert_eq!(result.answers["q"].probability(), 0.95);
+    assert_eq!(result.usage, json!({"input_tokens":21,"output_tokens":0}));
+}

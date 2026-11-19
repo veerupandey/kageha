@@ -1,0 +1,21 @@
+[package]
+name = "kageha-agent-sdk"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+[dependencies]
+kageha-contracts = { path = "../kageha-contracts" }
+kageha-runtime = { path = "../kageha-runtime" }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+futures-util = "0.3"
+[dev-dependencies]
+kageha-runtime-service = { path = "../kageha-runtime-service" }
+kageha-runtime-store = { path = "../kageha-runtime-store" }
+kageha-workspace = { path = "../kageha-workspace" }
+tempfile = "3"
+kageha-models = { path = "../kageha-models" }
+axum.workspace = true

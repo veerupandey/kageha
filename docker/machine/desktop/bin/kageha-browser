@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Focus the existing headed Chromium; do not spawn a second profile.
+if command -v xdotool >/dev/null 2>&1; then
+  if xdotool search --onlyvisible --class Chromium windowactivate >/dev/null 2>&1; then
+    exit 0
+  fi
+fi
+exec kageha-machine browser

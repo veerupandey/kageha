@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "code-quality",
+  "version": "1.0.0",
+  "description": "Review code and check edited Python files for syntax errors.",
+  "extensions": {
+    "io.kageha": {
+      "api_version": 1,
+      "hooks": "./hooks/hooks.json"
+    },
+    "com.openai": {
+      "hooks": []
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "kageha-personal",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test.mjs",
+    "test:browser": "node ../../crates/kageha-loop/tests/webui_browser_e2e.mjs --personal-channels"
+  },
+  "dependencies": {
+    "mime-types": "^2.1.35",
+    "twilio": "^5.10.0"
+  }
+}

@@ -1,0 +1,153 @@
+name: Build installable Kageha
+on:
+  workflow_dispatch:
+    inputs:
+      qualify_linux:
+        description: Qualify Linux routes against the configured SSH fixture and live model
+        type: boolean
+        default: false
+  push:
+    branches: ['release/**']
+    tags: ['v*']
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-15, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: scripts/package_release.sh
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y nginx bubblewrap
+      - run: node packaging/check-release.mjs dist/kageha-*.tar.gz
+        env:
+          KAGEHA_TEST_HTTPS: ${{ runner.os == 'Linux' && '1' || '0' }}
+          KAGEHA_NGINX: /usr/sbin/nginx
+      - if: runner.os == 'Linux'
+        name: Start and restart the packaged systemd installation
+        run: |
+          sudo useradd --system --create-home --home-dir /var/lib/kageha --shell /usr/sbin/nologin kageha
+          sudo install -d /opt/kageha
+          sudo tar -xzf dist/kageha-linux-x64.tar.gz -C /opt/kageha
+          sudo ln -s /opt/kageha/kageha-linux-x64 /opt/kageha/current
+          sudo install -m 644 /opt/kageha/current/share/kageha/linux/kageha.service /etc/systemd/system/kageha.service
+          sudo systemctl daemon-reload
+          sudo systemctl start kageha
+          curl --fail --retry 12 --retry-connrefused --retry-delay 1 http://127.0.0.1:8788/health
+          sudo systemctl restart kageha
+          curl --fail --retry 12 --retry-connrefused --retry-delay 1 http://127.0.0.1:8788/health
+          sudo systemctl stop kageha
+      - name: Build and test released Docker image
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          docker build -f docker/desktop/Dockerfile -t kageha-desktop:machine-v3 .
+          tar -xzf dist/kageha-linux-x64.tar.gz -C "$RUNNER_TEMP"
+          bundle="$RUNNER_TEMP/kageha-linux-x64"
+          KAGEHA_LOOP_BIN="$bundle/bin/kageha-loop" KAGEHA_BROWSER_BIN="$bundle/bin/kageha-browser" \
+            KAGEHA_CHROMIUM="$(command -v google-chrome)" node crates/kageha-loop/tests/docker_machine_e2e.mjs | tee dist/docker-qualification.log
+          docker save kageha-desktop:machine-v3 | gzip -1 > dist/kageha-desktop-linux-x64.tar.gz
+          (cd dist && sha256sum kageha-desktop-linux-x64.tar.gz > kageha-desktop-linux-x64.tar.gz.sha256)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            dist/kageha-*.tar.gz*
+            dist/docker-qualification.log
+          if-no-files-found: error
+  linux-qualification:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.qualify_linux)
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: linux-qualification
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-ubuntu-24.04
+          path: dist
+      - name: Prepare Linux host capabilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap curl socat xvfb xauth openbox xdotool scrot xterm
+          sudo loginctl enable-linger "$(id -un)"
+          sudo systemctl start "user@$(id -u).service"
+          tar -xzf dist/kageha-linux-x64.tar.gz -C "$RUNNER_TEMP"
+          docker load -i dist/kageha-desktop-linux-x64.tar.gz
+          echo "KAGEHA_TEST_BUNDLE=$RUNNER_TEMP/kageha-linux-x64" >> "$GITHUB_ENV"
+          echo "KAGEHA_TEST_CHROMIUM=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+      - name: Qualify host and SSH routes with a live model
+        env:
+          SSH_FIXTURE_PRIVATE_KEY: ${{ secrets.SSH_FIXTURE_PRIVATE_KEY }}
+          KAGEHA_TEST_SSH_HOST: ${{ vars.SSH_FIXTURE_HOST }}
+          KAGEHA_TEST_SSH_USER: ${{ vars.SSH_FIXTURE_USER }}
+          KAGEHA_TEST_SSH_PORT: ${{ vars.SSH_FIXTURE_PORT }}
+          KAGEHA_TEST_SSH_WORKSPACE: ${{ vars.SSH_FIXTURE_WORKSPACE }}
+          KAGEHA_TEST_SSH_HOST_KEY: ${{ vars.SSH_FIXTURE_HOST_KEY }}
+          KAGEHA_TEST_LIVE_MODEL_URL: ${{ vars.LIVE_MODEL_URL }}
+          KAGEHA_TEST_LIVE_MODEL: ${{ vars.LIVE_MODEL }}
+          KAGEHA_TEST_LIVE_MODEL_KEY: ${{ secrets.LIVE_MODEL_KEY }}
+          KAGEHA_REQUIRE_LIVE_MODEL: '1'
+          KAGEHA_TEST_DOCKER: '1'
+          KAGEHA_DESKTOP_IMAGE: kageha-desktop:machine-v3
+          KAGEHA_TEST_RECEIPT: dist/linux-qualification.json
+        run: |
+          set -euo pipefail
+          key=$(mktemp "$RUNNER_TEMP/kageha-ssh.XXXXXXXX")
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$SSH_FIXTURE_PRIVATE_KEY" > "$key"
+          KAGEHA_TEST_SSH_IDENTITY="$key" node crates/kageha-loop/tests/linux_routes_e2e.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-qualification
+          path: dist/linux-qualification.json
+          if-no-files-found: error
+  draft:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, linux-qualification]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+      - name: Create a draft with the tested downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          existing=$(gh api --paginate "repos/$GH_REPO/releases?per_page=100" |
+            jq -r --arg tag "$TAG" '.[] | select(.tag_name == $tag) | .draft')
+          case "$existing" in
+            true)
+              gh release upload "$TAG" dist/*
+              ;;
+            '')
+              gh release create "$TAG" --verify-tag --draft --title "Kageha $TAG" \
+                --notes 'Download the archive for your system, extract it, and follow the included README.' dist/*
+              ;;
+            *)
+              echo "::error::Expected at most one unpublished release for $TAG"
+              exit 1
+              ;;
+          esac

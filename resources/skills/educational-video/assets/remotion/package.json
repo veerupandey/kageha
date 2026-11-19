@@ -1,0 +1,8 @@
+{
+  "name": "educational-video-project",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {"render": "remotion render src/index.tsx Lesson out/video.mp4", "studio": "remotion studio src/index.tsx"},
+  "dependencies": {"@remotion/cli": "4.0.484", "remotion": "4.0.484", "react": "19.2.0", "react-dom": "19.2.0"},
+  "devDependencies": {"typescript": "5.9.3", "@types/react": "19.2.2"}
+}

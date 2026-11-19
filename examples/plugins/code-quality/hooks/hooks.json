@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "postToolUse": [
+      { "matcher": "write_file", "command": "python3 \"$PLUGIN_ROOT/scripts/check_python.py\"" },
+      { "matcher": "edit_file", "command": "python3 \"$PLUGIN_ROOT/scripts/check_python.py\"" }
+    ]
+  }
+}

@@ -68,12 +68,12 @@ pub fn default_env_paths(workspace: &Path) -> Vec<PathBuf> {
 }
 
 pub fn supported(protocol: &str) -> bool {
-    matches!(protocol, "openai_compat" | "anthropic_compat")
+    matches!(protocol, "openai_compat" | "anthropic_compat" | "codex_app_server")
 }
 
 /// Resolve a base URL or an already complete completion endpoint without vendor-name branches.
 pub fn completion_url(base: &str, protocol: &str) -> io::Result<String> {
-    if !supported(protocol) && !matches!(protocol, "system_one" | "clef" | "openai_decisions") {
+    if protocol == "codex_app_server" || !supported(protocol) && !crate::decisions::is_typed_protocol(protocol) {
         return Err(io::Error::other("Unsupported provider protocol"));
     }
     let mut url = reqwest::Url::parse(base.trim())
@@ -87,7 +87,7 @@ pub fn completion_url(base: &str, protocol: &str) -> io::Result<String> {
         return Err(io::Error::other("Invalid provider endpoint"));
     }
     let path = url.path().trim_end_matches('/');
-    let endpoint = if protocol == "openai_decisions" {
+    let endpoint = if matches!(protocol, "openai_decisions" | "gemini_decisions") {
         if path.ends_with("/decisions") {
             path.to_owned()
         } else {
@@ -332,6 +332,7 @@ impl Catalog {
                 .as_str()
                 .filter(|v| !v.is_empty())
                 .unwrap_or(id));
+            row["vision"] = json!(vision(entry));
             for role in entry["roles"]
                 .as_array()
                 .into_iter()
@@ -354,6 +355,25 @@ impl Catalog {
             roles: Value::Object(roles),
         })
     }
+}
+/// The context window in tokens of a catalog or settings model entry: its optional
+/// `context_window` field, else the conservative
+/// [`DEFAULT_CONTEXT_WINDOW`](kageha_contracts::execution::DEFAULT_CONTEXT_WINDOW).
+/// Zero, negative and non-integer values are treated as absent.
+pub fn context_window(entry: &Value) -> u64 {
+    entry["context_window"]
+        .as_u64()
+        .filter(|tokens| *tokens > 0)
+        .unwrap_or(kageha_contracts::execution::DEFAULT_CONTEXT_WINDOW)
+}
+/// Whether a catalog or settings model entry accepts image input: its `vision` flag, else
+/// `vision` in its `capabilities` list (Requirement 20.2).
+pub fn vision(entry: &Value) -> bool {
+    entry["vision"].as_bool().unwrap_or_else(|| {
+        entry["capabilities"]
+            .as_array()
+            .is_some_and(|all| all.iter().any(|c| c == "vision"))
+    })
 }
 /// Same precedence as the retained Python catalog, with an explicit file override for service hosts.
 pub fn default_paths(workspace: &Path) -> Vec<PathBuf> {
@@ -485,6 +505,22 @@ mod tests {
             .models
             .iter()
             .any(|v| v["context_window"].as_u64().unwrap_or(0) > 0));
+        let flag = |id: &str| catalog.models.iter().find(|v| v["id"] == id).unwrap()["vision"].clone();
+        assert_eq!((flag("local-model"), flag("messages-model")), (json!(true), json!(false)));
+    }
+    #[test]
+    fn the_vision_flag_overrides_the_capability_list() {
+        assert!(vision(&json!({"capabilities":["vision"]})));
+        assert!(!vision(&json!({"capabilities":["vision"],"vision":false})));
+        assert!(vision(&json!({"vision":true})));
+        assert!(!vision(&json!({})));
+    }
+    #[test]
+    fn context_window_uses_the_entry_or_a_conservative_default() {
+        assert_eq!(context_window(&json!({"context_window":200000})), 200_000);
+        for missing in [json!({}), json!({"context_window":0}), json!({"context_window":"big"})] {
+            assert_eq!(context_window(&missing), 128_000);
+        }
     }
     #[test]
     fn environment_aliases_and_missing_destination_variables() {

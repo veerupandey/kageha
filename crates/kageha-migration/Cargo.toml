@@ -1,0 +1,21 @@
+[package]
+name = "kageha-migration"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Restartable portable history import without WebUI storage coupling"
+
+[dependencies]
+kageha-workspace = { path = "../kageha-workspace" }
+kageha-knowledge = { path = "../kageha-knowledge" }
+kageha-policy = { path = "../kageha-policy" }
+kageha-contracts = { path = "../kageha-contracts" }
+serde.workspace = true
+serde_json.workspace = true
+rusqlite.workspace = true
+sha2.workspace = true
+fs2.workspace = true
+libc = "0.2"
+tempfile = "3"
+serde_yaml = "0.9"
+

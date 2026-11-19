@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "@langchain/mcp-adapters": "2.0.2",
+    "@langchain/openai": "1.8.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "langchain": "1.6.3",
+    "zod": "4.6.7"
+  },
+  "name": "kageha-independent-agent-acceptance",
+  "private": true,
+  "type": "module"
+}

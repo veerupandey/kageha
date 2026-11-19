@@ -1,0 +1,711 @@
+/* Canvas UI color tokens & design utilities */
+
+[data-ui="kageha"] {
+  font-family: var(--font-sans);
+  font-kerning: normal;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Transition utilities — respect prefers-reduced-motion */
+[data-ui="kageha"] * {
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui="kageha"] * {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+[data-reduce-motion="true"][data-ui="kageha"] * {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}
+
+/* Sidebar */
+.ka-sidebar {
+  background: var(--color-sidebar);
+  border-right: 1px solid var(--color-line);
+}
+
+/* ── Command-center polish ─────────────────────────────────────────────── */
+.app-shell {
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 75% -10%, color-mix(in srgb, var(--color-accent) 7%, transparent), transparent 32rem),
+    linear-gradient(135deg, color-mix(in srgb, var(--color-canvas) 96%, var(--color-accent)), var(--color-canvas));
+  color: var(--color-ink);
+}
+
+.ka-sidebar-shell {
+  box-shadow: 12px 0 32px color-mix(in srgb, #000 22%, transparent);
+}
+
+.ka-sidebar-shell .ka-sidebar {
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--color-sidebar) 96%, var(--color-accent)), var(--color-sidebar));
+}
+
+.ka-sidebar button {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.ka-sidebar section + section {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-line) 68%, transparent);
+}
+
+.ka-sidebar-item.active {
+  box-shadow: inset 2px 0 0 var(--color-accent), 0 5px 16px color-mix(in srgb, #000 12%, transparent);
+}
+
+.ka-sidebar-item:focus-visible,
+.ka-sidebar button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 80%, white);
+  outline-offset: 2px;
+}
+
+.ka-sidebar-nav {
+  max-height: 48%;
+  scrollbar-width: thin;
+}
+
+.ka-sidebar-threads {
+  scrollbar-width: thin;
+}
+
+.ka-sidebar-collapsed {
+  box-shadow: 8px 0 24px color-mix(in srgb, #000 10%, transparent);
+}
+
+.ka-mobile-header {
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.ka-command-center {
+  position: relative;
+  overflow: auto;
+}
+
+.ka-command-center::before {
+  position: absolute;
+  width: 28rem;
+  height: 28rem;
+  content: "";
+  pointer-events: none;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 68%);
+  filter: blur(8px);
+  opacity: 0.7;
+}
+
+.ka-command-center > div {
+  position: relative;
+}
+
+.ka-command-center-kicker {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  opacity: 0.9;
+}
+
+.ka-command-center-title {
+  letter-spacing: -0.045em;
+  text-shadow: 0 1px 24px color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
+.ka-hero-input > div {
+  border-color: color-mix(in srgb, var(--color-line-strong) 72%, transparent);
+  box-shadow: 0 18px 45px color-mix(in srgb, #000 15%, transparent), 0 0 0 1px color-mix(in srgb, var(--color-accent) 5%, transparent);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.ka-hero-input > div:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 52px color-mix(in srgb, #000 18%, transparent), 0 0 0 4px var(--color-accent-soft);
+}
+
+.ka-thread-header,
+.ka-thread-view > header {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--color-line-strong) 55%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.ka-canvas-panel {
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-canvas));
+  border-left: 1px solid color-mix(in srgb, var(--color-line-strong) 70%, transparent);
+  box-shadow: -18px 0 42px color-mix(in srgb, #000 12%, transparent);
+}
+
+.ka-artifact-panel > header,
+.ka-artifact-panel > div:first-child {
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.ka-artifact-panel button:focus-visible,
+.ka-canvas-panel [role="separator"]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.ka-artifact-panel [role="separator"] {
+  transition: background-color 150ms ease;
+}
+
+.ka-conversation {
+  background: color-mix(in srgb, var(--color-canvas) 78%, transparent);
+  scroll-padding-bottom: 2rem;
+}
+
+.ka-thread-view .group.relative {
+  max-width: 50rem;
+}
+
+.ka-thread-view article {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.ka-thread-view article > div:first-of-type {
+  letter-spacing: -0.005em;
+}
+
+.ka-thread-view article strong,
+.ka-thread-view article b {
+  font-weight: 600;
+}
+
+.ka-sidebar,
+.ka-canvas-panel,
+.ka-composer {
+  letter-spacing: -0.002em;
+}
+
+.ka-sidebar .text-\[0\.65rem\],
+.ka-canvas-panel .text-\[0\.65rem\],
+.ka-canvas-panel .text-\[0\.7rem\] {
+  letter-spacing: 0.005em;
+}
+
+.ka-thread-view code,
+.ka-thread-view pre,
+.terminal-activity,
+.ka-canvas-panel pre {
+  font-variant-ligatures: none;
+  font-feature-settings: "zero", "tnum";
+}
+
+.terminal-activity {
+  border-color: color-mix(in srgb, var(--color-line-strong) 58%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, #000 10%, transparent);
+}
+
+.terminal-activity summary,
+.terminal-activity > div:first-child {
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+  letter-spacing: 0.01em;
+}
+
+.ka-canvas-panel {
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--color-canvas));
+}
+
+.ka-canvas-panel [role="tablist"] {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+
+.ka-canvas-panel [role="tab"] {
+  min-height: 1.8rem;
+}
+
+.ka-canvas-panel button:focus-visible,
+.ka-thread-view button:focus-visible,
+.ka-thread-view input:focus-visible,
+.ka-thread-view textarea:focus-visible,
+.ka-thread-view select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 80%, white);
+  outline-offset: 2px;
+}
+
+.ka-conversation-panel > div:last-child {
+  position: relative;
+}
+
+.ka-composer {
+  background: color-mix(in srgb, var(--color-canvas) 88%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.ka-composer-surface {
+  border-color: color-mix(in srgb, var(--color-line-strong) 72%, transparent);
+  box-shadow: 0 12px 34px color-mix(in srgb, #000 13%, transparent), 0 0 0 1px color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+.ka-composer-surface:focus-within {
+  box-shadow: 0 16px 38px color-mix(in srgb, #000 16%, transparent), 0 0 0 3px var(--color-accent-soft);
+}
+
+@media (max-width: 767px) {
+  .ka-command-center {
+    justify-content: flex-start;
+    padding-top: 5rem;
+  }
+
+  .ka-command-center-title {
+    font-size: 2.35rem;
+  }
+}
+
+.ka-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.ka-sidebar-item:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-ink);
+}
+
+.ka-sidebar-item > svg {
+  color: var(--color-faint);
+  flex-shrink: 0;
+}
+
+.ka-sidebar-item:hover > svg {
+  color: var(--color-muted);
+}
+
+.ka-sidebar-item.active {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+  box-shadow: inset 2px 0 0 var(--color-accent), 0 5px 16px color-mix(in srgb, #000 12%, transparent);
+}
+
+/* Status dot */
+.ka-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.ka-dot--active { background: var(--color-success); }
+.ka-dot--waiting { background: var(--color-accent); }
+.ka-dot--idle { background: var(--color-faint); }
+.ka-dot--error { background: var(--color-danger); }
+
+/* Pills */
+.ka-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--color-line) 85%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--color-muted);
+  cursor: pointer;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-ink) 4%, transparent);
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ka-pill:hover {
+  background: var(--color-surface-hover);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-line));
+  color: var(--color-ink);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-ink) 8%, transparent);
+}
+
+.ka-pill:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.ka-pill > svg {
+  color: var(--color-accent);
+}
+
+.ka-pill--active {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Cards */
+.ka-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.ka-card:hover {
+  border-color: var(--color-line-strong);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Artifact grid */
+.ka-artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.ka-artifact-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+  transition: border-color 150ms, transform 150ms;
+}
+
+.ka-artifact-thumb:hover {
+  border-color: var(--color-accent);
+  transform: scale(1.02);
+}
+
+.ka-artifact-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ka-artifact-thumb .ka-artifact-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.375rem 0.5rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: #fff;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Lightbox */
+.ka-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ka-lightbox-frame {
+  position: relative;
+  width: 96vw;
+  max-width: 1800px;
+  height: 94vh;
+  max-height: none;
+}
+
+.ka-lightbox {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+}
+
+/* Media viewer: dark canvas edge-to-edge with solid top bar */
+.ka-lightbox--media {
+  background: #07090e;
+  position: relative;
+}
+
+.ka-lightbox-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem 0.625rem 1rem;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.ka-lightbox--media .ka-lightbox-toolbar {
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: #11141a;
+  padding-bottom: 0.625rem;
+}
+
+.ka-lightbox-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.ka-lightbox--media .ka-lightbox-title {
+  color: #fff;
+  text-shadow: none;
+}
+
+.ka-lightbox-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ka-lightbox-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 150ms, border-color 150ms, color 150ms;
+}
+
+.ka-lightbox-tool-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-line-strong);
+}
+
+.ka-lightbox-tool-btn--icon {
+  padding: 0;
+  width: 2.25rem;
+  justify-content: center;
+}
+
+.ka-lightbox--media .ka-lightbox-tool-btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+.ka-lightbox--media .ka-lightbox-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 1920px) {
+  .ka-lightbox-frame {
+    width: calc(100vw - 6rem);
+  }
+}
+
+.ka-lightbox-preview {
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #07090e;
+  position: relative;
+  overflow: hidden;
+}
+
+.ka-lightbox-preview img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Mobile: full-screen viewer */
+@media (max-width: 767px) {
+  body.ka-lightbox-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  .ka-lightbox-backdrop {
+    align-items: stretch;
+    justify-content: stretch;
+    backdrop-filter: none;
+    overscroll-behavior: contain;
+  }
+
+  .ka-lightbox-frame {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+  }
+
+  .ka-lightbox {
+    flex-direction: column;
+    border-radius: 0;
+  }
+
+  .ka-lightbox-preview {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  .ka-lightbox-preview img,
+  .ka-lightbox-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: auto;
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  .ka-lightbox-close {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Toolbar: clear the notch, keep tap targets ≥44px, avoid crowding. */
+  .ka-lightbox-toolbar {
+    padding: max(0.6rem, env(safe-area-inset-top, 0px)) max(0.6rem, env(safe-area-inset-right, 0px)) 1.5rem
+      max(0.9rem, env(safe-area-inset-left, 0px));
+    gap: 0.5rem;
+  }
+
+  .ka-lightbox--media .ka-lightbox-toolbar {
+    padding-bottom: 2rem;
+  }
+
+  .ka-lightbox-title {
+    font-size: 0.8rem;
+  }
+
+  .ka-lightbox-tool-btn {
+    min-height: 2.75rem;
+    padding: 0 0.9rem;
+  }
+
+  .ka-lightbox-tool-btn--icon {
+    width: 2.75rem;
+  }
+
+  /* On the narrowest screens drop the Download label to an icon so the
+     filename keeps room; the aria-label preserves accessibility. */
+  @media (max-width: 380px) {
+    .ka-lightbox-tool-btn span {
+      display: none;
+    }
+
+    .ka-lightbox-tool-btn {
+      width: 2.75rem;
+      padding: 0;
+      justify-content: center;
+    }
+  }
+
+  .ka-lightbox-mobile-nav {
+    display: inline-flex;
+    position: absolute;
+    top: 50%;
+    z-index: 10;
+    transform: translateY(-50%);
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    backdrop-filter: blur(6px);
+  }
+
+  .ka-lightbox-mobile-nav--prev {
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+  }
+
+  .ka-lightbox-mobile-nav--next {
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+  }
+
+  .ka-lightbox-mobile-counter {
+    display: block;
+    position: absolute;
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    border-radius: 9999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+  }
+
+  .ka-lightbox-nav {
+    display: none;
+  }
+
+  .ka-artifact-inline-image img {
+    max-height: min(50dvh, 28rem);
+  }
+}
+
+.ka-lightbox-mobile-nav,
+.ka-lightbox-mobile-counter {
+  display: none;
+}
+
+/* Suggested follow-ups */
+.ka-followup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background 150ms, border-color 150ms;
+}
+
+.ka-followup:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-line-strong);
+}
+
+.ka-followup .ka-followup-arrow {
+  margin-left: auto;
+  color: var(--color-faint);
+}

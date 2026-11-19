@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "kageha-client"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "Optional client SDK; never a Kageha backend dependency"
+readme = "README.md"
+
+[project.optional-dependencies]
+browser = ["httpx>=0.28,<1"]
+browser-mcp = ["mcp>=1.26,<2"]
+
+[tool.setuptools.package-data]
+kageha_client = ["py.typed"]

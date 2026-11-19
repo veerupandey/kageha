@@ -348,3 +348,24 @@ fn review_is_exact_scoped_and_shadow_never_authorizes() {
         assert!(s.review(&foreign, "Fill City", &[], &c).is_err());
     }
 }
+
+#[test]
+fn inherited_browser_actions_require_opt_in_and_respect_explicit_modes() {
+    let legacy: Policy = serde_json::from_value(json!({"mode":"active"})).unwrap();
+    assert_eq!(legacy.effective(Purpose::Action).mode, Mode::Off);
+    assert_eq!(legacy.effective(Purpose::Guidance).mode, Mode::Active);
+
+    for mode in [Mode::Off, Mode::Shadow, Mode::Active] {
+        let policy = Policy { mode, browser_actions_follow_mode: true, ..legacy.clone() };
+        assert_eq!(policy.effective(Purpose::Action).mode, mode);
+        assert_eq!(policy.effective(Purpose::Guidance).mode, Mode::Off);
+        assert_eq!(policy.effective(Purpose::Recovery).mode, Mode::Off);
+        assert_eq!(policy.effective(Purpose::Review).mode, Mode::Off);
+    }
+    let explicit: Policy = serde_json::from_value(json!({
+        "mode":"active", "browser_actions_follow_mode":true,
+        "overrides":{"browser_action":{"mode":"off"},"recovery":{"mode":"shadow"}}
+    })).unwrap();
+    assert_eq!(explicit.effective(Purpose::Action).mode, Mode::Off);
+    assert_eq!(explicit.effective(Purpose::Recovery).mode, Mode::Shadow);
+}

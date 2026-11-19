@@ -1,0 +1,507 @@
+{
+  "source": "ServiceNow/BrowserGym",
+  "revision": "27a90ce815098f43414e93491e06907af468e45b",
+  "miniwob_revision": "33c3b4ddef8c6eb67c57a29663d844b1eda7e614",
+  "tasks": [
+    {
+      "id": "ascending-numbers",
+      "description": "Click on the numbers in ascending order."
+    },
+    {
+      "id": "bisect-angle",
+      "description": "Find the line that bisects an angle evenly in two."
+    },
+    {
+      "id": "book-flight",
+      "description": "Search for flight results."
+    },
+    {
+      "id": "book-flight-nodelay",
+      "description": "[book-flight] Removed animation."
+    },
+    {
+      "id": "buy-ticket",
+      "description": "Buy a ticket that matches the requested criteria."
+    },
+    {
+      "id": "choose-date",
+      "description": "Learn to operate a date picker tool."
+    },
+    {
+      "id": "choose-date-easy",
+      "description": "[choose-date] December only."
+    },
+    {
+      "id": "choose-date-medium",
+      "description": "[choose-date] December or November only."
+    },
+    {
+      "id": "choose-date-nodelay",
+      "description": "[choose-date] Removed animation."
+    },
+    {
+      "id": "choose-list",
+      "description": "Choose an item from a drop down list."
+    },
+    {
+      "id": "circle-center",
+      "description": "Find the center of a circle."
+    },
+    {
+      "id": "click-button",
+      "description": "Click on a specific button in a generated form."
+    },
+    {
+      "id": "click-button-sequence",
+      "description": "Click on buttons in a certain order."
+    },
+    {
+      "id": "click-checkboxes",
+      "description": "Click desired checkboxes."
+    },
+    {
+      "id": "click-checkboxes-large",
+      "description": "[click-checkboxes] Click at least 5 out of up to 12 checkboxes."
+    },
+    {
+      "id": "click-checkboxes-soft",
+      "description": "[click-checkboxes] Paraphrased entries."
+    },
+    {
+      "id": "click-checkboxes-transfer",
+      "description": "[click-checkboxes] Train and test on different number of targets."
+    },
+    {
+      "id": "click-collapsible",
+      "description": "Click a collapsible element to expand it."
+    },
+    {
+      "id": "click-collapsible-2",
+      "description": "Find and click on a specified link, from collapsible elements."
+    },
+    {
+      "id": "click-collapsible-2-nodelay",
+      "description": "[click-collapsible-2] Removed animation."
+    },
+    {
+      "id": "click-collapsible-nodelay",
+      "description": "[click-collapsible] Removed animation."
+    },
+    {
+      "id": "click-color",
+      "description": "Click the specified color."
+    },
+    {
+      "id": "click-dialog",
+      "description": "Click the button to close the dialog box."
+    },
+    {
+      "id": "click-dialog-2",
+      "description": "Click a specific button in a dialog box."
+    },
+    {
+      "id": "click-link",
+      "description": "Click on a specified link in text."
+    },
+    {
+      "id": "click-menu",
+      "description": "Click menu items."
+    },
+    {
+      "id": "click-menu-2",
+      "description": "Find a specific item from a menu."
+    },
+    {
+      "id": "click-option",
+      "description": "Click option boxes."
+    },
+    {
+      "id": "click-pie",
+      "description": "Click items on a pie menu."
+    },
+    {
+      "id": "click-pie-nodelay",
+      "description": "[click-pie] Removed animation."
+    },
+    {
+      "id": "click-scroll-list",
+      "description": "Click multiple items from a scroll list."
+    },
+    {
+      "id": "click-shades",
+      "description": "Click the shades that match a specified color."
+    },
+    {
+      "id": "click-shape",
+      "description": "Click on a specific shape."
+    },
+    {
+      "id": "click-tab",
+      "description": "Click on a tab element."
+    },
+    {
+      "id": "click-tab-2",
+      "description": "Click a link inside a specific tab element."
+    },
+    {
+      "id": "click-tab-2-easy",
+      "description": "[click-tab-2] One 1 tab."
+    },
+    {
+      "id": "click-tab-2-hard",
+      "description": "[click-tab-2] Varying number of tabs from 2 to 6."
+    },
+    {
+      "id": "click-tab-2-medium",
+      "description": "[click-tab-2] Choose between a link or \u2018no match\u2019."
+    },
+    {
+      "id": "click-test",
+      "description": "Click on a single button."
+    },
+    {
+      "id": "click-test-2",
+      "description": "Click on one of two buttons."
+    },
+    {
+      "id": "click-test-transfer",
+      "description": "[click-test] Different buttons during train and test."
+    },
+    {
+      "id": "click-widget",
+      "description": "Click on a specific widget in a generated form."
+    },
+    {
+      "id": "copy-paste",
+      "description": "Copy text and paste it into an input."
+    },
+    {
+      "id": "copy-paste-2",
+      "description": "Copy text from a specific textarea and paste it into an input."
+    },
+    {
+      "id": "count-shape",
+      "description": "Count number of shapes."
+    },
+    {
+      "id": "count-sides",
+      "description": "Count the number of sides on a shape."
+    },
+    {
+      "id": "daily-calendar",
+      "description": "Create an event on a daily calendar."
+    },
+    {
+      "id": "drag-box",
+      "description": "Drag the smaller box into the larger box."
+    },
+    {
+      "id": "drag-circle",
+      "description": "Drag an item in a specified direction."
+    },
+    {
+      "id": "drag-cube",
+      "description": "Drag a 3D cube to show a specific face."
+    },
+    {
+      "id": "drag-items",
+      "description": "Drag items in a list, in a specified direction"
+    },
+    {
+      "id": "drag-items-grid",
+      "description": "Drag items in a 2D grid around."
+    },
+    {
+      "id": "drag-shapes",
+      "description": "Drag shapes into a box."
+    },
+    {
+      "id": "drag-shapes-2",
+      "description": "Drag shapes into boxes, categorized by type."
+    },
+    {
+      "id": "drag-single-shape",
+      "description": "Drag a randomly generated shape in a specified direction."
+    },
+    {
+      "id": "drag-sort-numbers",
+      "description": "Drag numbers into sorted ascending order."
+    },
+    {
+      "id": "draw-circle",
+      "description": "Draw a circle around a marked point."
+    },
+    {
+      "id": "draw-line",
+      "description": "Draw a line through a marked point."
+    },
+    {
+      "id": "email-inbox",
+      "description": "Navigate through an email inbox and perform some actions."
+    },
+    {
+      "id": "email-inbox-delete",
+      "description": "[email-inbox] No scrolling + 1 subtask."
+    },
+    {
+      "id": "email-inbox-forward",
+      "description": "[email-inbox] No scrolling + 1 subtask."
+    },
+    {
+      "id": "email-inbox-forward-nl",
+      "description": "[email-inbox-forward] varied instruction texts (30 templates)."
+    },
+    {
+      "id": "email-inbox-forward-nl-turk",
+      "description": "[email-inbox-forward] varied instruction texts (100 templates)."
+    },
+    {
+      "id": "email-inbox-important",
+      "description": "[email-inbox] No scrolling + 1 subtask."
+    },
+    {
+      "id": "email-inbox-nl-turk",
+      "description": "[email-inbox] varied instruction texts (100 templates for each subtask)."
+    },
+    {
+      "id": "email-inbox-noscroll",
+      "description": "[email-inbox] No scrolling."
+    },
+    {
+      "id": "email-inbox-reply",
+      "description": "[email-inbox] No scrolling + 1 subtask."
+    },
+    {
+      "id": "email-inbox-star-reply",
+      "description": "[email-inbox] No scrolling + 2 subtasks."
+    },
+    {
+      "id": "enter-date",
+      "description": "Use the date input to pick the correct date."
+    },
+    {
+      "id": "enter-password",
+      "description": "Enter the password into the form."
+    },
+    {
+      "id": "enter-text",
+      "description": "Enter given text to a textfield."
+    },
+    {
+      "id": "enter-text-2",
+      "description": "Convert given text to upper or lower case."
+    },
+    {
+      "id": "enter-text-dynamic",
+      "description": "Enter dynamically generated text to a textfield."
+    },
+    {
+      "id": "enter-time",
+      "description": "Enter the specified time into the input."
+    },
+    {
+      "id": "find-greatest",
+      "description": "Find the card with the greatest number."
+    },
+    {
+      "id": "find-midpoint",
+      "description": "Find the shortest mid-point of two points."
+    },
+    {
+      "id": "find-word",
+      "description": "Find nth word in a block of text."
+    },
+    {
+      "id": "focus-text",
+      "description": "Focus into a text input."
+    },
+    {
+      "id": "focus-text-2",
+      "description": "Focus on a specific text input."
+    },
+    {
+      "id": "form-sequence",
+      "description": "Perform a series of instructions on a form."
+    },
+    {
+      "id": "form-sequence-2",
+      "description": "Perform a series of instructions on a form."
+    },
+    {
+      "id": "form-sequence-3",
+      "description": "Perform a series of instructions on a form."
+    },
+    {
+      "id": "generate-number",
+      "description": "Generate a random number that meets certain criteria."
+    },
+    {
+      "id": "grid-coordinate",
+      "description": "Find the Cartesian coordinates on a grid."
+    },
+    {
+      "id": "guess-number",
+      "description": "Guess the number."
+    },
+    {
+      "id": "highlight-text",
+      "description": "Highlight all the text."
+    },
+    {
+      "id": "highlight-text-2",
+      "description": "Highlight the specified paragraph."
+    },
+    {
+      "id": "hot-cold",
+      "description": "Find and click on the hot area."
+    },
+    {
+      "id": "identify-shape",
+      "description": "Identify a randomly generated shape."
+    },
+    {
+      "id": "login-user",
+      "description": "Enter user login details into the form."
+    },
+    {
+      "id": "login-user-popup",
+      "description": "[login-user] Random popup."
+    },
+    {
+      "id": "multi-layouts",
+      "description": "Fill in forms of varying layouts."
+    },
+    {
+      "id": "multi-orderings",
+      "description": "Fill in forms with shuffled field orderings."
+    },
+    {
+      "id": "navigate-tree",
+      "description": "Navigate a file tree to find a specified file or folder."
+    },
+    {
+      "id": "number-checkboxes",
+      "description": "Draw a given number using checkboxes."
+    },
+    {
+      "id": "odd-or-even",
+      "description": "Mark each number as odd or even."
+    },
+    {
+      "id": "order-food",
+      "description": "Order food items from a menu."
+    },
+    {
+      "id": "phone-book",
+      "description": "Find a contact in a phone book."
+    },
+    {
+      "id": "read-table",
+      "description": "Read information out from a table."
+    },
+    {
+      "id": "read-table-2",
+      "description": "Read multiple pieces of information out from a table."
+    },
+    {
+      "id": "resize-textarea",
+      "description": "Resize a textarea in a given direction."
+    },
+    {
+      "id": "right-angle",
+      "description": "Given two points, add a third point to create a right angle."
+    },
+    {
+      "id": "scroll-text",
+      "description": "Scroll through a text area element and enter last word into text area."
+    },
+    {
+      "id": "scroll-text-2",
+      "description": "Scroll through a text area in a given direction."
+    },
+    {
+      "id": "search-engine",
+      "description": "Search through a bunch of results to find a specified link."
+    },
+    {
+      "id": "sign-agreement",
+      "description": "Sign a user agreement."
+    },
+    {
+      "id": "simple-algebra",
+      "description": "Solve for X."
+    },
+    {
+      "id": "simple-arithmetic",
+      "description": "Perform some arithmetic math operations."
+    },
+    {
+      "id": "social-media",
+      "description": "Interact with a social media feed."
+    },
+    {
+      "id": "social-media-all",
+      "description": "[social-media] Do some action on all matching entries."
+    },
+    {
+      "id": "social-media-some",
+      "description": "[social-media] Do some action on some matching entries."
+    },
+    {
+      "id": "stock-market",
+      "description": "Buy from the stock market below a specified price."
+    },
+    {
+      "id": "terminal",
+      "description": "Use the terminal to delete a file."
+    },
+    {
+      "id": "text-editor",
+      "description": "Modify a text's style in a text-editor."
+    },
+    {
+      "id": "text-transform",
+      "description": "Enter slightly transformed text into a text box."
+    },
+    {
+      "id": "tic-tac-toe",
+      "description": "Win a game of tic-tac-toe."
+    },
+    {
+      "id": "unicode-test",
+      "description": "Click on the button with the correct Unicode text."
+    },
+    {
+      "id": "use-autocomplete",
+      "description": "Use autocomplete element efficiently."
+    },
+    {
+      "id": "use-autocomplete-nodelay",
+      "description": "[use-autocomplete] Removed delay."
+    },
+    {
+      "id": "use-colorwheel",
+      "description": "Use a color wheel."
+    },
+    {
+      "id": "use-colorwheel-2",
+      "description": "Use a color wheel given specific random color."
+    },
+    {
+      "id": "use-slider",
+      "description": "Use a slider to select a particular value."
+    },
+    {
+      "id": "use-slider-2",
+      "description": "Use sliders to create a given combination."
+    },
+    {
+      "id": "use-spinner",
+      "description": "Use a spinner to select given number."
+    },
+    {
+      "id": "visual-addition",
+      "description": "Count the total number of blocks."
+    }
+  ]
+}

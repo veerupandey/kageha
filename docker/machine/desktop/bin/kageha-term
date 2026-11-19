@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+exec xterm \
+  -fa "DejaVu Sans Mono" -fs 11 \
+  -bg "#0d1117" -fg "#c9d1d9" -cr "#58a6ff" \
+  -geometry 88x16 \
+  -title "Terminal" \
+  -e bash

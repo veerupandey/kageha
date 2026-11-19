@@ -1,0 +1,8 @@
+{
+  "name": "code-modernization",
+  "version": "1.0.0",
+  "api_version": 1,
+  "description": "Track Python modules touched during a modernization session.",
+  "skills": "./skills",
+  "mods": "./status.py"
+}
