@@ -1673,7 +1673,12 @@ impl Browsers {
         let result = if browser.process.is_some() {
             browser.read_selection().await
         } else {
-            tokio::time::timeout(PROFILE_PROBE_TIMEOUT, browser.read_selection())
+            let timeout = if ws.active == "machine" {
+                MACHINE_PROFILE_PROBE_TIMEOUT
+            } else {
+                PROFILE_PROBE_TIMEOUT
+            };
+            tokio::time::timeout(timeout, browser.read_selection())
                 .await
                 .unwrap_or(Err("cdp_unavailable"))
         };
