@@ -41,6 +41,8 @@ pub const METHODS: &[&str] = &[
 const MAX_UNCONFIGURED_BROWSERS: usize = 16;
 const MAX_TABS: usize = 32;
 const PROFILE_PROBE_TIMEOUT: Duration = Duration::from_secs(1);
+// A managed profile may have to start an SSH or Docker command before CDP responds.
+const MACHINE_PROFILE_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 /// Reading the selected tab. The attached limit stays inside `PROFILE_PROBE_TIMEOUT`.
 const TAB_READ_OWNED: Duration = Duration::from_secs(2);
 const TAB_READ_ATTACHED: Duration = Duration::from_millis(600);
@@ -845,8 +847,13 @@ impl Browsers {
                 if !allow_web {
                     return Err("browser_personal_profile_unavailable");
                 }
+                let timeout = if machine.is_some() {
+                    MACHINE_PROFILE_PROBE_TIMEOUT
+                } else {
+                    PROFILE_PROBE_TIMEOUT
+                };
                 Some(
-                    tokio::time::timeout(PROFILE_PROBE_TIMEOUT, async {
+                    tokio::time::timeout(timeout, async {
                         let (port, path) = cdp::discover(&endpoint).await?;
                         if workspaces.iter().any(|(id, ws)| {
                             ws.profiles.iter().any(|(name, browser)| {
