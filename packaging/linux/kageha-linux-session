@@ -49,6 +49,13 @@ desktop_environment() {
     export DISPLAY=$(<"$state/display") XAUTHORITY="$state/Xauthority"
 }
 
+launch_desktop_app() {
+    systemd-run --user --quiet --collect --service-type=exec \
+        --property="BindsTo=$unit" --property="After=$unit" \
+        --setenv="DISPLAY=$DISPLAY" --setenv="XAUTHORITY=$XAUTHORITY" \
+        --working-directory="$(pwd -P)" "$@"
+}
+
 case "$op" in
     ensure)
         mode=${1:-}
@@ -150,13 +157,15 @@ case "$op" in
         desktop_environment
         cd -- "$(<"$state/workspace")"
         if [[ $op == terminal ]]; then
-            nohup xterm -T 'Kageha Terminal' </dev/null >/dev/null 2>&1 &
+            instance="kageha-terminal-$RANDOM-$RANDOM"
+            launch_desktop_app xterm -name "$instance" -T 'Kageha Terminal'
+            timeout 5 xdotool search --sync --onlyvisible --classname "^$instance$" windowactivate --sync
         else
             app=${2:-}
             [[ $app =~ ^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$ ]] || exit 2
             program=$(command -v -- "$app")
             [[ $program == /* && -x $program ]] || exit 3
-            nohup "$program" </dev/null >/dev/null 2>&1 &
+            launch_desktop_app "$program"
         fi
         ;;
     stop)
