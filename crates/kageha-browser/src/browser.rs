@@ -1673,7 +1673,7 @@ impl Browsers {
         let result = if browser.process.is_some() {
             browser.read_selection().await
         } else {
-            let timeout = if ws.active == "machine" {
+            let timeout = if browser.machine {
                 MACHINE_PROFILE_PROBE_TIMEOUT
             } else {
                 PROFILE_PROBE_TIMEOUT
@@ -2556,7 +2556,11 @@ impl Browser {
         if self.unreadable.contains_key(&self.selected) {
             return Ok(self.drop_selected_tab(result));
         }
-        let limit = if self.process.is_some() { TAB_READ_OWNED } else { TAB_READ_ATTACHED };
+        let limit = if self.process.is_some() || self.machine {
+            TAB_READ_OWNED
+        } else {
+            TAB_READ_ATTACHED
+        };
         let selected = self.selected.clone();
         let read = tokio::time::timeout(limit, async {
             let session = cdp.attach(&selected).await?;
