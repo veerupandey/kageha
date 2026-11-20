@@ -15,6 +15,7 @@ Environment=KAGEHA_WEBUI_PORT=8788
 EnvironmentFile=-/etc/kageha/kageha.env
 WorkingDirectory=/var/lib/kageha
 ExecStart=/opt/kageha/current/start
+SuccessExitStatus=143
 Restart=on-failure
 RestartSec=3s
 TimeoutStopSec=25s

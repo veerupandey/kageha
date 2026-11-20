@@ -175,6 +175,12 @@ fn debugger_endpoint(container: &str) -> io::Result<String> {
     Ok(format!("ws://127.0.0.1:{port}/devtools/browser/{debugger}"))
 }
 
+// Use buffered copies between sockets and child pipes. Linux's optimized
+// splice path is unavailable under some emulators, including Rosetta.
+fn copy_relay_stream(reader: &mut dyn io::Read, writer: &mut dyn Write) {
+    let _ = io::copy(reader, writer);
+}
+
 fn relay(transport: &BrowserTransport, mut stream: TcpStream) -> io::Result<()> {
     stream.set_nonblocking(false)?;
     let mut reader = stream.try_clone()?;
@@ -187,9 +193,9 @@ fn relay(transport: &BrowserTransport, mut stream: TcpStream) -> io::Result<()> 
     let mut output = child.stdout.take().expect("piped stdout");
     std::thread::scope(|scope| {
         scope.spawn(move || {
-            let _ = io::copy(&mut reader, &mut input);
+            copy_relay_stream(&mut reader, &mut input);
         });
-        let _ = io::copy(&mut output, &mut stream);
+        copy_relay_stream(&mut output, &mut stream);
         let _ = stream.shutdown(Shutdown::Both);
     });
     let _ = child.kill();

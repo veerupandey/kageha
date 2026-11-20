@@ -29,7 +29,16 @@ The service user needs access to the local Docker daemon. Access to that daemon 
 
 ## Diagnose, upgrade, and restore
 
-Check `systemctl status kageha`, `journalctl -u kageha`, and `curl --fail http://127.0.0.1:8788/health` from the server. For an upgrade, stop Kageha and back up `/var/lib/kageha` in full, including the vault key, SSH pins, and chat workspaces. Back up any external SSH workspaces separately. Point `/opt/kageha/current` at the new bundle, start the service, and repeat the route checks. To roll back, stop the service, restore the pre-upgrade backup and bundle symlink, then start the service again.
+Check `systemctl status kageha` and `journalctl -u kageha` from the server. The health endpoint requires the same token as the WebUI.
+
+```sh
+token=$(sudo -u kageha env KAGEHA_DATA_DIR=/var/lib/kageha /opt/kageha/current/start token)
+printf 'Authorization: Bearer %s\n' "$token" |
+  curl --fail --silent --show-error --header @- http://127.0.0.1:8788/health
+unset token
+```
+
+For an upgrade, stop Kageha and back up `/var/lib/kageha` in full, including the vault key, SSH pins, and chat workspaces. Back up any external SSH workspaces separately. Point `/opt/kageha/current` at the new bundle, start the service, and repeat the route checks. To roll back, stop the service, restore the pre-upgrade backup and bundle symlink, then start the service again.
 
 ## Qualify a release
 
