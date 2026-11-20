@@ -1,12 +1,18 @@
 # Kageha
 
-**Kageha is the Rust version of the personal AI assistant I’ve been using for several years.** It runs on your own machine or server and gives the assistant a workspace for files, a live browser, and a chat where you can follow its work and steer it.
+**Kageha is the Rust port of a personal AI agent I built from scratch and have used for a couple of years.** I’m a fan of open source and use models like GLM, DeepSeek, and Qwen. I wanted more control than the agent harnesses I tried gave me, so I built my own.
 
-[Watch the 48-second demo](https://github.com/veerupandey/kageha/releases) · [Quick start](#quick-start) · [Features](#features) · [Build from source](#build-from-source)
+The original grew into an assistant I use to control my TV, projector, coffee machine, and lights. I keep that repo private because it contains my own home integrations and personal setup.
 
-[![Kageha checking an incident in Chromium and updating a brief in the same chat](docs/assets/kageha-browser-demo.png)](https://github.com/veerupandey/kageha/releases)
+I’ve ported most of the core features to this public repo, including browser automation, computer use, remote execution over SSH, Linux and Docker workspaces, and specialist agent discovery and delegation. There’s still more to bring over. You can run Kageha on your own machine or server and add your own home integrations through [skills and MCP tools](https://github.com/veerupandey/kageha/blob/main/docs/PLUGIN_CONNECTIONS.md).
 
-Open **Watch Kageha work (48-second MP4)** under the release assets. In the demo, Kageha turns a support backlog into a brief. A follow-up in the same conversation asks it to check an incident in Chromium, verify the latest update, and revise the original file.
+[Watch the 48-second demo](#demo) · [Quick start](#quick-start) · [Features](#features) · [Build from source](#build-from-source)
+
+## Demo
+
+https://github.com/user-attachments/assets/faa3b79a-a9ca-42d3-bc08-60e5146a099e
+
+Kageha turns a support backlog into a brief. On a follow-up, it checks an incident in Chromium and updates the same file. [Download the MP4 from v0.1.0](https://github.com/veerupandey/kageha/releases/download/v0.1.0/kageha-demo.mp4).
 
 ## Features
 
