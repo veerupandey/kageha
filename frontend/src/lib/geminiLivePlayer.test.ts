@@ -52,7 +52,7 @@ describe("PcmPlayer", () => {
     fakeCtx = new FakeAudioContext();
     vi.stubGlobal(
       "AudioContext",
-      vi.fn(() => fakeCtx),
+      vi.fn(function createAudioContext() { return fakeCtx; }),
     );
   });
 
