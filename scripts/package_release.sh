@@ -10,7 +10,15 @@ trap 'rm -rf "$stage"' EXIT
 os=$(uname -s)
 arch=$(uname -m)
 case "$os" in Darwin) platform=macos ;; Linux) platform=linux ;; *) echo "Unsupported OS: $os" >&2; exit 1 ;; esac
+target=${CARGO_BUILD_TARGET:-}
+case "$platform:$target" in
+  *:) ;;
+  linux:x86_64-unknown-linux-gnu) arch=x86_64 ;;
+  linux:aarch64-unknown-linux-gnu) arch=arm64 ;;
+  *) echo "Unsupported release target: $target on $platform" >&2; exit 1 ;;
+esac
 case "$arch" in arm64|aarch64) arch=arm64 ;; x86_64) arch=x64 ;; *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; esac
+release_dir="${CARGO_TARGET_DIR:-target}${target:+/$target}/release"
 name="kageha-$platform-$arch"
 root="$stage/$name"
 mkdir -p "$root/bin" "$root/share/kageha/webui"
@@ -19,7 +27,7 @@ cargo build --locked --release -p kageha-harness -p kageha-loop -p kageha-worksp
 npm --prefix frontend ci
 npm --prefix frontend run build -- --outDir "$root/share/kageha/webui" --sourcemap false
 for bin in kageha kageha-loop kageha-shell-service kageha-browser; do
-  install -m 755 "${CARGO_TARGET_DIR:-target}/release/$bin" "$root/bin/$bin"
+  install -m 755 "$release_dir/$bin" "$root/bin/$bin"
 done
 # Only version-controlled resources belong in the distribution.
 git archive HEAD:resources models.yaml skills | tar -x -C "$root/share/kageha"

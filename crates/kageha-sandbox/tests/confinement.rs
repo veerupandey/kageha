@@ -215,7 +215,7 @@ fn hidden_subtrees_of_a_read_root_are_unreadable_except_nested_write_roots() {
     assert!(!root.join("bad").exists());
 }
 #[test]
-fn device_files_process_substitution_and_ancestor_metadata_work_but_listing_outside_does_not() {
+fn device_files_process_substitution_and_ancestor_metadata_preserve_confinement() {
     if !kageha_sandbox::available() {
         return;
     }
@@ -253,11 +253,18 @@ fn device_files_process_substitution_and_ancestor_metadata_work_but_listing_outs
         String::from_utf8_lossy(&output.stdout),
         "heredoc\nsame\n1\nfile\ntmp\n"
     );
-    // The parent lists, but reading or writing anything in it stays denied.
-    for script in ["cat ../sibling", "printf x > ../new"] {
-        let output = run(script);
-        assert!(!output.status.success(), "{script}: {output:?}");
-        assert!(!String::from_utf8_lossy(&output.stdout).contains("sibling"), "{script}");
+    let read = run("cat ../sibling");
+    assert!(!read.status.success(), "{read:?}");
+    assert!(read.stdout.is_empty(), "{read:?}");
+
+    let write = run("printf x > ../new");
+    #[cfg(target_os = "macos")]
+    assert!(!write.status.success(), "{write:?}");
+    // Linux can write to the private tmpfs. It must disappear with the sandbox.
+    #[cfg(target_os = "linux")]
+    if write.status.success() {
+        let fresh = run("test ! -e ../new");
+        assert!(fresh.status.success(), "{fresh:?}");
     }
     assert!(!root.join("new").exists());
 }

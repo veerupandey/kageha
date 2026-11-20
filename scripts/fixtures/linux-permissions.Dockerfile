@@ -1,5 +1,5 @@
 FROM rust:1.90-bookworm
-RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap openssh-server \
+RUN apt-get update && apt-get install -y --no-install-recommends bubblewrap openssh-server python3-venv \
     && rm -rf /var/lib/apt/lists/* && mkdir -p /run/sshd
 WORKDIR /fixture
 COPY . .

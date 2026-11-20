@@ -1950,15 +1950,23 @@ mod tests {
         assert_eq!(ok(run(&format!("cat {p}/brief.md")), "brief"), "brief");
         for command in [
             format!("cat {p}/.kageha/secret"),
-            format!("ls {p}/.kageha"),
             format!("printf x > {p}/new"),
             format!("printf x > {}", single_quoted(outside.path().join("escape").to_str().unwrap())),
-            "printf x > ../escape".to_string(),
         ] {
             let out = run(&command);
             assert_ne!(out.exit_code, 0, "{command}: {out:?}");
-            assert!(!out.stdout.contains("secret"), "{command}: {out:?}");
+            assert!(out.stdout.is_empty(), "{command}: {out:?}");
         }
+        // Bubblewrap hides the files behind an empty mount. Seatbelt denies the listing.
+        let hidden = run(&format!("ls {p}/.kageha"));
+        assert!(hidden.stdout.is_empty(), "{hidden:?}");
+        #[cfg(target_os = "macos")]
+        assert_ne!(hidden.exit_code, 0, "{hidden:?}");
+
+        let adjacent = run("printf x > ../escape");
+        assert!(adjacent.stdout.is_empty(), "{adjacent:?}");
+        #[cfg(target_os = "macos")]
+        assert_ne!(adjacent.exit_code, 0, "{adjacent:?}");
         assert!(!parent.join("new").exists() && !outside.path().join("escape").exists());
         assert!(!dir.path().join("chat/escape").exists());
         shell.close();

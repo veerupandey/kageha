@@ -1192,8 +1192,11 @@ mod tests {
         let denied = finished(s.manager.run("c1", &write, "c", t, &never).unwrap());
         assert_ne!(denied.exit_code, 0);
         assert!(!target.exists());
-        let roots = ShellPaths::layout(&s.workspace, s.manager.toolchain_cache()).sandbox().write_roots;
-        assert_eq!(super::super::sandbox_denials(&denied.stderr, &roots, &[]), [target.clone()], "{}", denied.stderr);
+        #[cfg(target_os = "macos")]
+        {
+            let roots = ShellPaths::layout(&s.workspace, s.manager.toolchain_cache()).sandbox().write_roots;
+            assert_eq!(super::super::sandbox_denials(&denied.stderr, &roots, &[]), [target.clone()], "{}", denied.stderr);
+        }
         // A one-off process with the granted root can write, starting in the given directory.
         let once = finished(s.manager.run_once("c1", &s.workspace, &s.workspace.join("sub"),
             vec![granted.path().to_path_buf(), PathBuf::from("/")],
@@ -1201,9 +1204,12 @@ mod tests {
         assert_eq!(once.exit_code, 0, "{once:?}");
         assert_eq!(fs::read_to_string(&target).unwrap(), "ok");
         assert_eq!(once.stdout, format!("{}\n[]\n", s.workspace.join("sub").display()));
-        // `/` is never a write root.
+        // Requesting `/` must not expose the host's root filesystem.
+        let root_probe = PathBuf::from(format!("/kg-root-probe-{}", target.parent().unwrap().file_name().unwrap().to_string_lossy()));
         let root = finished(s.manager.run_once("c1", &s.workspace, &s.workspace, vec![PathBuf::from("/")],
-            "touch /kg-root-probe", "c", t, &never).unwrap());
+            &format!("touch {}", single_quoted(&root_probe.to_string_lossy())), "c", t, &never).unwrap());
+        assert!(!root_probe.exists(), "{root:?}");
+        #[cfg(target_os = "macos")]
         assert_ne!(root.exit_code, 0);
         // The session keeps its own directory and variables.
         let after = finished(s.manager.run("c1", "pwd -P; echo \"[$KG_STATE]\"", "c", t, &never).unwrap());
@@ -1415,7 +1421,7 @@ mod tests {
     }
 
     #[test]
-    fn runtime_limit_sends_sigterm_then_sigkill() {
+    fn runtime_limit_ends_both_responsive_and_term_ignoring_jobs() {
         if !sandboxed() {
             return;
         }
@@ -1427,10 +1433,15 @@ mod tests {
         let ended = |job: &JobStatus| manager.job_status("c1", &job.record.job_id).unwrap().state != JobState::Running;
         assert!(wait_until(Duration::from_secs(10), || ended(&plain)));
         assert_eq!(manager.job_status("c1", &plain.record.job_id).unwrap().state, JobState::Killed);
-        // The TERM-ignoring command outlives SIGTERM and needs SIGKILL after the grace.
+        // Seatbelt leaves the TERM-ignoring process alive until SIGKILL.
+        // Bubblewrap can tear down its PID namespace as soon as its wrapper exits.
         let pgid = stubborn.record.pid;
         assert!(wait_until(Duration::from_secs(15), || !group_exists(pgid)));
-        assert!(begin.elapsed() >= Duration::from_millis(1900), "{:?}", begin.elapsed());
+        #[cfg(target_os = "macos")]
+        let minimum = Duration::from_millis(1900);
+        #[cfg(not(target_os = "macos"))]
+        let minimum = limits.max_runtime;
+        assert!(begin.elapsed() >= minimum, "{:?}", begin.elapsed());
         assert_eq!(manager.job_status("c1", &stubborn.record.job_id).unwrap().state, JobState::Killed);
     }
 

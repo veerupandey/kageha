@@ -23,7 +23,7 @@ Clone the Rust repository with your own GitHub account and run the setup command
 
 ```sh
 git clone https://github.com/veerupandey/kageha.git
-cd kageha_rust
+cd kageha
 ```
 
 Use Node.js 24, a current Kageha checkout, Docker with an accessible engine, and Chrome or Chromium. On Linux the installer uses a systemd user manager. Enable lingering for the service account if it needs to run across logouts. On macOS services run in the logged-in user's launchd domain.
