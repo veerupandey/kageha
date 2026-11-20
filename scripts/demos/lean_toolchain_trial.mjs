@@ -17,7 +17,7 @@ function option(name, fallback) {
   return args[at + 1];
 }
 const binary = path.resolve(option("--binary", "target/debug/kageha-loop"));
-const output = path.resolve(option("--output", "docs/audits/lean-toolchain-live-2026-11-15.json"));
+const output = path.resolve(option("--output", "output/benchmarks/lean-toolchain-live-2026-11-15.json"));
 const maxCalls = Number(option("--max-calls", "15"));
 const maxSeconds = Number(option("--seconds", "180"));
 if (!Number.isInteger(maxCalls) || maxCalls < 1 || maxCalls > 100 || !Number.isInteger(maxSeconds) || maxSeconds < 1 || maxSeconds > 600) {

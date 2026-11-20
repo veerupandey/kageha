@@ -31,9 +31,9 @@ async with BrowserClient(browser_url, token, workspace_id, "external-agent") as 
 ```
 
 This extra uses HTTPX. The browser implementation remains Rust, with fixed client
-scope, epoch fencing, bounded responses and no automatic input retries. See
-`examples/langgraph-browser/README.md` for the independent Python LangGraph agent,
-real-model acceptance, uploads, crash recovery and visible Comet demonstration.
+scope, epoch fencing, bounded responses and no automatic input retries. See the
+[standalone browser guide](../../crates/kageha-browser/STANDALONE.md) for service
+setup, receipts, and external MCP integration.
 
 For the browser's native MCP stdio transport, install the independent optional
 `browser-mcp` extra and keep an initialized official MCP session open across calls:
@@ -48,5 +48,4 @@ selection = await browser.call("browser_selection")
 
 The caller owns MCP connection/process lifetime. This bridge does not reconnect,
 retry input, launch a Python backend or depend on LangGraph. It preserves native
-errors and receipts. For a scoped LangGraph host with approvals, see the example's
-`mcp-live` and `mcp-comet` commands and `mcp_live.browser_mcp` context manager.
+errors and receipts.

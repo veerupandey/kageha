@@ -8,7 +8,6 @@ packages independently of Kageha. Standalone mode provides browser control and
 receipt storage without a Kageha installation. A host can instead supply its own
 approval and journal systems through the application bridge. Kageha uses that
 bridge and keeps its chat, workspace files and UI outside the daemon.
-[Migration plan](../../docs/BROWSER_RUST_MIGRATION_PLAN.md)
 
 For independent HTTP deployment and agent integration, see the
 [standalone API guide](STANDALONE.md). The API uses the same Rust authority,
@@ -25,128 +24,18 @@ connected without exhausting replay protection. Cancellation and shutdown remain
 available even when that history is full. Reusing an input request ID still
 fails before dispatch.
 
-## Build and test without touching the running application
+## Build and test
 
-Run from the migration worktree. Keep build output separate from the installed
-computer helper and existing app builds:
-
-```sh
-CARGO_TARGET_DIR=/tmp/kageha-browser-rust-m2-target \
-  cargo build --locked --manifest-path crates/kageha-browser/Cargo.toml
-
-CARGO_TARGET_DIR=/tmp/kageha-browser-rust-m2-target \
-  cargo test --locked --manifest-path crates/kageha-browser/Cargo.toml
-
-python scripts/generate_browser_protocol_fixtures.py --check
-
-KAGEHA_TEST_BROWSER_BINARY=/tmp/kageha-browser-rust-m2-target/debug/kageha-browser \
-  KAGEHA_TEST_CHROMIUM="/absolute/path/to/test/Chromium" \
-  PYTHONPATH=src python -m pytest -q tests/test_browser_rust_runtime.py
-```
-
-Use an interpreter with the project's existing dependencies. Tests opt into an
-explicit binary path; the application never builds or starts a daemon on import.
-All integration tests use short, disposable `/tmp/kbr-*` directories and their
-own processes. They do not call production startup scripts or browser endpoints.
-
-To run a development instance manually, supply every identity flag:
+From the workspace root, build the service and run its Rust tests. Use a disposable Chromium profile for the integration tests.
 
 ```sh
-DEV_BROWSER_ROOT="$(mktemp -d /tmp/kageha-browser-dev.XXXXXX)"
-/tmp/kageha-browser-rust-m2-target/debug/kageha-browser \
-  --state-dir "$DEV_BROWSER_ROOT/state" \
-  --instance-id browser-rust-dev \
-  --application-id kageha-browser-dev \
-  --chromium "/absolute/path/to/test/Chromium" \
-  --standalone on
+cargo build --locked -p kageha-browser
+cargo test --locked -p kageha-browser
+KAGEHA_BROWSER_BIN="$PWD/target/debug/kageha-browser" \
+  node --test crates/kageha-browser/tests/http_api.mjs
 ```
 
-Use an absolute, private state directory owned by the current user.
-An existing nonempty directory must carry this instance's matching marker. The
-service refuses unsafe permissions rather than changing them. Use a short path:
-Unix sockets have a platform-specific path length limit. The daemon uses Unix sockets.
-
-## Private and signed-in browsing in Kageha
-
-Build a native release archive on the platform where the daemon will run.
-The archive contains the standalone binary, its protocol schema and a
-manifest with the binary's SHA-256 digest.
-
-```sh
-python scripts/package_rust_browser.py \
-  --target-dir /tmp/kageha-browser-release \
-  --output /tmp/kageha-browser-bundles
-```
-
-Extract the archive and set these variables in the Kageha process:
-
-- `KAGEHA_BROWSER_CANARY_PACKAGE` is the absolute path to the extracted bundle directory.
-- `KAGEHA_BROWSER_CANARY_CHROMIUM` is the absolute path to the Chromium or Chrome executable.
-
-Use a bundle built from this revision to enable the signed-in profile picker.
-
-With both paths configured, eligible local chats use Rust by default. Apply
-the same configuration to the WebUI and any workers that create chats. Use
-the Browser profile picker for Private, Chrome, or Comet. Chrome and Comet
-require an existing debug-enabled profile at `KAGEHA_CHROME_CDP` or
-`KAGEHA_COMET_CDP`, respectively. Selecting a profile grants access to new
-tabs in that profile, including its existing site sign-in. A named Chrome
-or Comet preference starts selected but disconnected until the user connects
-it. Hosted browser preferences keep their existing routing. Existing chats
-retain their runtime and can switch using
-**Try Rust browser** or `{"runtime":"rust"}` at
-`POST /api/sessions/{id}/browser/runtime`.
-
-Set `KAGEHA_BROWSER_RUNTIME=python` to select Python for future chats, or
-set `KAGEHA_BROWSER_CANARY_SESSIONS` to restrict Rust to manual enrollment
-for a comma-separated list of chats. These settings preserve existing pins.
-Kageha verifies the package when starting the daemon. The daemon accepts
-only the pinned chat's workspace ID and the supported local profiles.
-
-After a daemon crash, Kageha restarts the service and retains the selected
-profile name and chat action journal. The panel binding changes. Private tabs
-are lost. Reconnect a signed-in profile to recover its previously managed tabs
-if the same browser process is still open. Other open tabs can be claimed
-explicitly from the panel.
-**Use Python browser** stops the Rust daemon and changes the chat's pin at
-an idle checkpoint. Return browser control first. An unresolved receipt or
-unverified browser input blocks rollback. If the original outcome cannot be
-verified, the chat keeps its hold for review.
-
-Set `KAGEHA_TEST_BROWSER_CANARY_PACKAGE` to the extracted directory and
-`KAGEHA_TEST_CHROMIUM` to a disposable Chromium executable to run the
-packaged canary tests in `tests/test_browser_rust_runtime.py`.
-
-## Python control client and explicit runtime seam
-
-```python
-from pathlib import Path
-from kageha.harness.browser.rust_client import RustBrowserClient
-
-async with RustBrowserClient(
-    state_dir=Path("/tmp/your-development-directory/state"),
-    instance_id="browser-rust-dev",
-    application_id="kageha-browser-dev",
-    workspace_id="disposable-workspace",
-) as client:
-    health = await client.health()
-    assert health["browser_execution"] is False
-    browser = (await client.request("launch_browser"))["result"]
-    tab = (await client.request("open_tab", {
-        **browser, "url": "about:blank",
-    }))["result"]
-    snapshot = (await client.request("observe_tab", tab))["result"]
-    await client.shutdown()
-```
-
-Use `browser_runtime("rust", ...)` for explicit client integration.
-
-The state token is read only from the user-private state directory, never from
-command-line arguments. Handshake validates instance, application, canonical
-state root, and service epoch; the socket also checks the peer UID. Workspace
-and client identity are pinned to the authenticated connection. This is local
-application-instance separation, not isolation from another process with full
-access to the same user's private files.
+For an independent instance, use the [standalone deployment guide](STANDALONE.md). For the Web UI, start with [browser setup](../../docs/BROWSER.md). The archive launcher starts the packaged browser service. A source deployment can configure a separately running service with `KAGEHA_BROWSER_STATE_DIR`.
 
 ## Protocol and bounds
 

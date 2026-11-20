@@ -1,267 +1,28 @@
-# Kageha Agent — Architecture
+# Rust workspace
 
-> A durable, multi-model AI agent framework with interactive chat, autonomous job execution, browser control, and a modern web UI.
+Kageha runs as a Rust service with a React web client. The release launcher starts the backend, locates packaged model and frontend assets, and keeps installation files separate from chat state. The personal messaging gateways are optional Node.js services.
 
-## System Overview
+| Area | Main components |
+| --- | --- |
+| Chat and tools | `kageha-loop` serves the Web UI and chat API. It connects the model adapters, tools, approvals, and event streams. |
+| Execution and recovery | `kageha-contracts` defines shared interfaces. `kageha-runtime` drives turns, `kageha-runtime-store` persists state, and `kageha-workflow` tracks work that can be resumed and verified. |
+| Browser and desktop | `kageha-browser` drives Chromium. `kageha-browser-decisions` can propose bounded actions for the native executor to validate. `kageha-computer` provides optional native macOS control. |
+| Workspaces | `kageha-workspace` handles shell sessions, files, and artifacts. `kageha-sandbox` confines local processes. The host also supports Docker workstations and SSH destinations. |
+| Access and integrations | `kageha-policy` classifies tool access. Separate components handle credentials, model adapters, MCP, and service connectors. |
+| Clients and compatibility | The [SDKs](../sdk/README.md) expose client interfaces. The [Rust launcher](../crates/kageha-harness/README.md) also documents offline import of supported legacy data. |
 
-## Session execution boundary
+The backend owns the chat and run state. Reopening the Web UI reattaches to the same run. Actions that may have already run use receipts for recovery. Follow-ups, worker jobs, approvals, and file artifacts keep their own persisted state.
 
-`kageha.harness.execution_policy` is the single execution selector. On the
-first turn it binds the session to exactly one environment and records it in
-`session.json`; subsequent turns retain that environment:
+## Maintainer checks
 
-| Environment | Terminal | Browser/computer policy |
-|---|---|---|
-| `local` | Mac/local shell | User-preferred GUI when login is required; otherwise Lightpanda first |
-| `server` | Headless server shell | Lightpanda first, Chromium/Playwright fallback. `/machine` uses box Chromium; host Playwright attaches over CDP. |
-| `sandbox` | Ephemeral Docker | Isolated Linux tools and browser |
-| `remote` | SSH/remote host | Remote tools only; no silent local fallback |
+From the repository root, run the Rust component suite and frontend checks.
 
-`KAGEHA_EXECUTION_ENV` can force one of these values (`mac`, `docker`, and
-`ssh` are accepted aliases). Provider fallbacks stay inside the selected
-boundary. End-of-turn cleanup removes session scratch state while preserving
-artifacts, checkpoints, and logs.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           User Interfaces                                │
-├──────────────┬──────────────┬──────────────┬────────────────────────────┤
-│  CLI (chat)  │   Web UI     │ Telegram bot │  WhatsApp QR / Cloud API   │
-│  ─────────── │  (React SPA) │  Bot         │  QR sidecar                │
-│  readline /  │  Vite + TS   │              │                            │
-│  prompt_toolkit             │              │                            │
-└──────┬───────┴──────┬───────┴──────┬───────┴────────────┬───────────────┘
-       │              │              │                     │
-       ▼              ▼              ▼                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         App Server (HTTP/WS/Unix)                         │
-│  JSON-RPC over HTTP · SSE streaming · Session management                 │
-│  Thread binding · Turn routing · Approval gateway                        │
-└──────────────────────────────────┬──────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Agent Runtime Engine                              │
-│                                                                          │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │
-│  │ Turn Request │  │  Event       │  │  Snapshot    │  │  Run Handle │ │
-│  │ Submission   │→ │  Journal     │→ │  Projection  │→ │  (async)    │ │
-│  └─────────────┘  │  (SQLite WAL)│  └──────────────┘  └─────────────┘ │
-│                    └──────────────┘                                      │
-│  Idempotent · Crash-recoverable · Resume from any checkpoint            │
-└──────────────────────────────────┬──────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Loop Controller                                   │
-│                                                                          │
-│  ┌───────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐              │
-│  │  Planner  │  │ Executor │  │ Verifier │  │ Monitor  │              │
-│  │ (GoalCard │  │ (N tool  │  │ (check   │  │ (stuck / │              │
-│  │  + Plan)  │  │  steps)  │  │  goals)  │  │  budget) │              │
-│  └───────────┘  └──────────┘  └──────────┘  └──────────┘              │
-│                                                                          │
-│  Modes: normal (act) · plan (clarify→plan→build) · goal (HITL iterate) │
-│  Contract: TaskContract → EvidenceRecord → Verification                  │
-└──────────────────────────────────┬──────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          Tool Harness                                     │
-│                                                                          │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │ Core Pack          │ Browser Pack    │ Media Pack    │ MCP        │  │
-│  │ ─────────────────  │ ──────────────  │ ────────────  │ ────────── │  │
-│  │ bash / write_file  │ headless_fetch  │ fal_video     │ External   │  │
-│  │ read_file / edit   │ browser_*       │ nano_banana   │ MCP server │  │
-│  │ web_search         │ screenshot      │ gemini_tts    │ tools via  │  │
-│  │ todo_write/read    │ CDP control     │ download_file │ stdio/SSE  │  │
-│  │ skill_run/load     │ Comet/LP/Docker │               │            │  │
-│  │ subagent_spawn     │                 │               │            │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  Security: approval gates · seatbelt/bwrap/docker sandbox · risk class  │
-│  Policy: HITL for mutations · auto-approve reads · budget ceiling        │
-└──────────────────────────────────┬──────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Model Router                                      │
-│                                                                          │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌────────────┐       │
-│  │  Gemini    │  │  OpenAI    │  │  Anthropic  │  │ SiliconFlow│       │
-│  │  Flash/Pro │  │  GPT-4o    │  │  Claude     │  │  GLM / Qwen│       │
-│  └────────────┘  └────────────┘  └────────────┘  └────────────┘       │
-│                                                                          │
-│  Ladder failover · Retry with backoff · Circuit breaker                  │
-│  Provider health tracking · Effort-based model selection                  │
-│  Role pins: planner / executor / fast_worker / embedding                 │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Memory & Skills                                   │
-│                                                                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────────┐   │
-│  │ Memory Service   │  │ Skill Registry  │  │ Project Brain        │   │
-│  │ ───────────────  │  │ ──────────────  │  │ ──────────────────── │   │
-│  │ SQLite FTS5      │  │ YAML skills in  │  │ AGENTS.md / rules /  │   │
-│  │ Provenance-aware │  │ ~/.kageha/skills│  │ hooks / worktrees    │   │
-│  │ LLM extraction   │  │ Auto-load by    │  │ Context injection    │   │
-│  │ Consolidation    │  │ embedding match │  │ per-project config   │   │
-│  │ Vector (optional)│  │ Distill from    │  │                      │   │
-│  │                  │  │ successful runs │  │                      │   │
-│  └─────────────────┘  └─────────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         Persistence Layer                                 │
-│                                                                          │
-│  ~/.kageha/                                                              │
-│  ├── runtime.db         Event journal + snapshots (SQLite WAL)           │
-│  ├── memory.db          Memory store (FTS5 + optional vectors)           │
-│  ├── sessions/          Workspace dirs per session (artifacts, plans)     │
-│  ├── jobs/              Durable async job records (JSON)                  │
-│  ├── skills/            User-defined skill YAML + scripts                │
-│  ├── tools/             Custom tool pack directories                     │
-│  ├── hooks.json         Global lifecycle hooks                           │
-│  ├── models.yaml        Model ladder config + role pins                  │
-│  └── platforms/         Channel auth state (WhatsApp, OAuth, etc.)       │
-│                                                                          │
-│  <project>/.kageha/                                                      │
-│  ├── hooks.json         Project-scoped hooks                             │
-│  ├── rules/             Project rules (auto-injected context)            │
-│  └── worktrees/         Agent git worktrees                              │
-└─────────────────────────────────────────────────────────────────────────┘
+```sh
+scripts/check_rust_components.sh
+npm --prefix frontend ci
+npm --prefix frontend run lint
+npm --prefix frontend test
+npm --prefix frontend run build
 ```
 
-## Web UI Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  React SPA (Vite + TypeScript + Tailwind CSS)                │
-│                                                              │
-│  ┌─────────────┐  ┌─────────────────────┐  ┌────────────┐ │
-│  │  AppShell   │  │    ThreadView        │  │  Lightbox  │ │
-│  │  ─────────  │  │    ──────────        │  │  ────────  │ │
-│  │  Sidebar    │  │  ConversationPanel   │  │  Preview   │ │
-│  │  ├ Agents   │  │  ├ MessageList       │  │  Sidebar   │ │
-│  │  ├ Threads  │  │  ├ TerminalActivity  │  │  Actions   │ │
-│  │  ├ Jobs     │  │  ├ ApprovalBanner    │  └────────────┘ │
-│  │  ├ Hooks    │  │  └ MiniComposer      │                  │
-│  │  └ Footer   │  │                      │  ┌────────────┐ │
-│  └─────────────┘  │  ArtifactPanel (R)   │  │ AgentCanvas│ │
-│                    │  ├ File list          │  │ ─────────  │ │
-│  ┌─────────────┐  │  ├ Inline preview    │  │ Timeline   │ │
-│  │CommandCenter│  │  ├ Code highlighting │  │ TodoBoard  │ │
-│  │ ──────────  │  │  └ Live refresh      │  │ Artifacts  │ │
-│  │ Hero Input  │  └─────────────────────┘  │ Stats      │ │
-│  │ QuickActions│                            └────────────┘ │
-│  │ RecentCards │  ┌─────────────────────┐                  │
-│  └─────────────┘  │     Composer         │                  │
-│                    │  ├ Multiline input   │                  │
-│                    │  ├ / slash commands  │                  │
-│                    │  ├ @ file mentions   │                  │
-│                    │  ├ File attach/paste │                  │
-│                    │  ├ Voice input       │                  │
-│                    │  └ Mode/Model select │                  │
-│                    └─────────────────────┘                  │
-│                                                              │
-│  State: Zustand store → SSE stream → real-time updates      │
-│  Styling: Tailwind CSS 4 + custom theme tokens              │
-│  Code: highlight.js + codeEnhancer + jsonRenderer           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Key Flows
-
-### Messaging Channels
-
-Telegram and WhatsApp adapters normalize inbound text and media into a shared
-channel message contract. The durable channel queue deduplicates provider
-redeliveries, serializes turns per peer, and records outbound delivery attempts.
-Telegram currently uses long polling. WhatsApp QR runs in an isolated Node
-sidecar; see [CHANNELS.md](CHANNELS.md) for setup and its production limitations.
-
-The **phone channel** (Twilio) is the exception to the polling model: it is
-webhook + websocket driven, so it runs inside the app server rather than as a
-polling adapter. Twilio POSTs to `/webhook/phone` and opens a `wss` media stream
-to `/media/phone`; `PhoneAdapter` decodes G.711 μ-law audio, runs STT → the same
-`ChannelRuntime` turn → TTS, and streams audio back. It reuses the media
-capability registry for voice (no hardcoded vendor). See
-[TELEPHONY.md](TELEPHONY.md).
-
-### Chat Turn (Normal Mode)
-```
-User message → ensureSession() → classify_turn (deterministic)
-  → route: resume | new_run | quick_*
-  → build context (memory recall + skill match + system_extra)
-  → durable_runtime.submit(TurnRequest)
-    → Event journal: ACCEPTED
-    → LoopController.run()
-      → Model call (with tools)
-      → Tool execution (sandboxed)
-      → Repeat 0..N steps
-      → Verify (early-stop or continue)
-    → Event journal: COMPLETED
-  → Format reply → Stream to UI
-```
-
-### Plan Mode
-```
-/plan <task> → Clarify phase (ask questions)
-  → Plan phase (generate plan.md + GoalCard)
-  → User approves (/build)
-  → Execute phase (step-by-step with TodoBoard)
-  → Verify phase (check all goals pass)
-  → Report deliverables
-```
-
-### Durable Jobs
-```
-POST /api/jobs → enqueue_job() → save JSON
-  → spawn detached worker process
-  → worker: AgentRuntime.submit() in plan mode
-  → worker: save progress to job record
-  → WebUI: poll /api/jobs or attach via SSE
-  → completion: notify channel (webui/telegram/etc.)
-```
-
-## Security Model
-
-| Layer | Mechanism |
-|-------|-----------|
-| Shell isolation | seatbelt (macOS) / bwrap (Linux) / Docker / SSH |
-| Tool approval | Risk-class gates: read (auto) → write (HITL) → network (ask) |
-| Budget ceiling | Per-session max_usd + max_steps |
-| Secrets | .env never committed; redaction in logs/journal |
-| Hooks | preToolUse can deny; exit(2) = hard block |
-| Sandbox fallback | approval_fallback profile when no OS sandbox |
-
-## Data Contracts
-
-| Entity | Storage | Format |
-|--------|---------|--------|
-| Sessions | SQLite `sessions` table | id, status, metadata_json |
-| Turns | SQLite `turns` table | Immutable event-sourced snapshots |
-| Events | SQLite `events` table | Append-only journal (WAL) |
-| Tool attempts | SQLite `tool_attempts` | Idempotent; reconcile on crash |
-| Memory | SQLite `memory.db` | FTS5 full-text + optional vectors |
-| Jobs | `~/.kageha/jobs/*.json` | Flat file per job |
-| Hooks | `.kageha/hooks.json` | JSON array of HookSpec |
-| Skills | `~/.kageha/skills/*.yaml` | Declarative skill definitions |
-
-## Technology Stack
-
-| Component | Technology |
-|-----------|------------|
-| Language | Python 3.11+ |
-| Package manager | uv (astral-sh) |
-| Web framework | stdlib http.server + asyncio |
-| Frontend | React 19 + TypeScript 6 + Vite 8 |
-| Styling | Tailwind CSS 4 |
-| State | Zustand |
-| Database | SQLite (WAL mode, FTS5) |
-| Models | Gemini, OpenAI, Anthropic, SiliconFlow, Azure |
-| Testing | pytest + vitest |
-| Linting | ruff + oxlint + pyright |
-| CI | GitHub Actions (matrix: 3 Python × 2 OS + frontend) |
+`cargo run --locked -p xtask -- boundaries` checks dependency direction. `cargo run --locked -p xtask -- cutover-audit` checks the Python-free backend source boundary. The [Linux deployment guide](LINUX_DEPLOYMENT.md#qualify-a-release) describes how to qualify the installable bundles.

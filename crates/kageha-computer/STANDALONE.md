@@ -108,23 +108,6 @@ Journals and lock files require an owned private directory and regular files; le
 
 `Controller::take_control` is a host-only method: it revokes lease and observation. It cannot undo or cancel an OS action already entered. Physical human-input detection and screen-lock observation are not implemented yet; an explicit host takeover is the currently enforced contract.
 
-## Evidence and release gates
-
-The [Codex/Antigravity evidence](research/competitor-evidence.md) and [UI-TARS/UFO source audit](research/framework-audit.md) record pinned identities, selected sources, observed facts and unknowns. Static code inspection is not runtime parity or performance evidence. No proprietary implementation was copied.
-
-Required before the Python-free production cutover:
-
-1. Complete app identity grants, desktop preview/manual-control parity and full end-to-end approval/takeover tests through the Rust Kageha host. The initial Rust host adapter provides native tools, per-chat ownership, approval-bound input and receipt recovery.
-2. Harden and retain the Swift/public Apple API adapter, including stable signing and macOS permission identity. Keep OS permissions separate from host authorization. Other operating systems may use their appropriate native languages behind the same Rust contract.
-3. Implement typed permission/locked-screen/intervention outcomes, app-instance identity, deadlines/queue admission and native event interruption cleanup.
-4. Add real disposable-fixture tests for AX values, radio/checkbox state, selections, focus/sheets, Unicode, scrolling, drag, screenshot scales and monitor changes. Run permission, crash, cancellation and takeover fault injection on macOS first; extend the matrix when additional OS adapters are introduced.
-5. Add full/diff observation baselines, AX notifications and bounded capture streaming after measuring equal geometry and codec. Do not loosen observation binding merely to hide stale-state errors.
-6. Add native clipboard ownership/restoration and remaining action capability groups only with readback, secret handling and held-input cleanup tests.
-7. Publish per-operation JSON schemas/typed agent adapters and a bounded authenticated network API. MCP stdio and the Rust library are available now; a remote computer HTTP endpoint is not.
-8. Add journal archival, private artifact retention, metrics, long-running soak/performance tests and extraction CI. Test upgrades/rollback without reusing old authority or repeating uncertain input.
-
-These gates are outstanding work, not claims of completeness. Rust owns the shared control path; Swift owns the macOS API adapter. Existing Kageha sessions and user drafts are preserved.
-
 ## Rust Kageha host configuration
 
 The host discovers the installed `~/.local/share/kageha/computer/Kageha Computer.app` helper and creates an owned mode-0700 state directory under `~/.kageha/runtime/computer-rust`. Override these with `KAGEHA_COMPUTER_BIN` and `KAGEHA_COMPUTER_STATE_DIR`. The host uses the Rust client, not Python. Input starts disabled unless `KAGEHA_COMPUTER_ALLOW_INPUT=1` or the operator chooses **Enable agent control**; model-initiated input still requires the native approval policy.
@@ -137,17 +120,11 @@ The host registers `computer_info`, `computer_permissions`, `computer_apps`, `co
 
 The packaged helper launches its native worker through LaunchServices and a private socket so macOS attributes permission checks to Kageha Computer. Unpackaged binaries have their launcher's permission identity. Ad-hoc signature changes may require reapproval; stable distribution signing remains necessary for production updates. The host dependency disables `native-macos`, so consuming its transport client does not link Swift into the agent loop. The separately built helper enables `native-macos` by default.
 
-## Benchmark-driven development
-
-The native [benchmark suite](bench/README.md) grades independent app state and fault recovery. It found and closed a preflight outcome-classification gap: the matched suite improved from 30/42 to 42/42, with another 28/28 held-out layout trials. These are scripted runtime measurements, not a full agent benchmark score.
+## Input and recovery
 
 ### Explicit field focus
 
 `focus_element` takes only an observed `element_token`. The exact window must already be focused, the control must still belong to that window, and its native focus attribute must be settable. Use `focus_window`, re-observe, `focus_element`, then re-observe before selecting or typing. Focus changes are explicit authorized actions; selection errors do not trigger automatic focus/key/pixel fallbacks. Disabled observed controls are rejected before any indexed native mutation.
-
-The expanded v3 frozen benchmark recorded 258 passing trials, two intermittent native AX failures during invalid-save clicks, and 30 blocked capture/pixel trials. Both native failures remained unknown, with no save confirmed and no write replay. Screen Recording access is unavailable to the benchmark helper, so screenshot coverage is not claimed. See the benchmark guide for preserved failing runs, workflow corrections and raw evidence.
-
-The subsequent action-timeout fix separates 100 ms AX traversal reads from bounded one-second native mutations. The 30-scenario follow-up passed 270 runnable trials with zero failures and 30 Screen Recording permission blocks. Unknown outcomes are still never automatically retried. Exact comparison/provenance: `bench/results/2026-11-07-action-timeout-summary.json`.
 
 ### Manual operator input
 
@@ -169,5 +146,3 @@ An input-enabled lease records an `armed` marker before granting authority. Rest
 `inspect` reads one exact `pid`/`window_id` without a lease and returns a **read-only** `inspection_id`, plus a bounded preview grant. It works while paused. Its tokens cannot authorize mutations. `receipt` continues to recover verified, dispatched, refused, or unknown outcomes across epochs; unknown outcomes must never be replayed. The Rust SDK uses bounded Unix pipe I/O (default 10 seconds, configurable up to 120 seconds). A transport deadline closes the owned connection and reports uncertainty without retrying.
 
 Kageha's authenticated take/return controls restart the owned connection explicitly, preserve the selected window, clear old frames, and show a pause reason. **Return control to agent** and **Resume manual control** are operator gestures. Refresh view remains read-only. The helper is separate from Kageha and the same controller/client/MCP contract works with another trusted framework.
-
-Acceptance evidence: `bench/results/2026-11-07-intervention-recovery/summary.json`. Native tests mutate only owned disposable fixtures. External-process input injection tests interruption handling; they are not presented as a physical-device benchmark. Public-site, OS-wide atomic input exclusion, and unattended soak coverage remain separate release work.

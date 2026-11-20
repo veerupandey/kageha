@@ -153,23 +153,10 @@ subprocess); no mutation is replayed. A launched app finishes a bounded in-fligh
 native operation before exiting on EOF. A queued call's timeout cannot close
 another in-flight request.
 
-## Investigation evidence
-
-The repository's `reports/codex-computer-control-2026-11-02/native-re` directory
-contains artifact hashes, selected symbols, bounded disassembly, and findings.
-Static symbols show separate AX/screenshot operations and both public SCK and
-private SkyLight-related code in Codex. They do not establish its live Finder
-capture path or timing constants. Kageha's public-API implementation is an original
-design informed by that boundary, not a recovered copy of Codex's native code.
-
-Apple references: [SCScreenshotManager](https://developer.apple.com/documentation/screencapturekit/scscreenshotmanager)
-and [Accessibility APIs](https://developer.apple.com/documentation/applicationservices).
-
 ## Native benchmark loop
 
 [bench/README.md](bench/README.md) describes the Rust/Swift execution-based
-benchmark, independent app-state evaluators, strict recovery gates and measured
-before/after results. This is separate from full model-driven MacArena/OSWorld
+benchmark, independent app-state evaluators, and recovery checks. This is separate from full model-driven MacArena/OSWorld
 scores and does not establish complete production coverage.
 
 

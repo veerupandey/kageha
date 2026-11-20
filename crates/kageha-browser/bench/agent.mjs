@@ -15,7 +15,7 @@ const workers=Number(args.workers??2),maxTurns=Number(args.turns??12),seed=Numbe
 assert(Number.isInteger(workers)&&workers>0&&workers<=4);
 assert(Number.isInteger(maxTurns)&&maxTurns>0&&maxTurns<=40);
 assert(Number.isSafeInteger(seed)&&seed>=1);
-const output=path.resolve(args.output??'crates/kageha-browser/bench/results/miniwob-agent.json');
+const output=path.resolve(args.output??'output/benchmarks/browser/miniwob-agent.json');
 fs.mkdirSync(path.dirname(output),{recursive:true});
 const traceFile=output.replace(/\.json$/,'')+'.jsonl';
 fs.writeFileSync(traceFile,'',{mode:0o600});

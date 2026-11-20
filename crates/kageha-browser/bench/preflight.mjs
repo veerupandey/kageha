@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 const args=Object.fromEntries(process.argv.slice(2).map(v=>v.replace(/^--/,'').split('=')));
-const output=path.resolve(args.output??'crates/kageha-browser/bench/results/external-preflight.json');
+const output=path.resolve(args.output??'output/benchmarks/browser/external-preflight.json');
 const report={version:1,checked_at:new Date().toISOString(),platform:process.platform,architecture:process.arch,benchmarks:{}};
 function command(bin,args){try{return execFileSync(bin,args,{encoding:'utf8',timeout:10000,stdio:['ignore','pipe','ignore']}).trim();}catch{return null;}}
 const disk=command('df',['-k','.']);

@@ -14,7 +14,7 @@ codex login
 codex login status
 
 # Start Kageha normally, then select the opt-in model:
-uv run kageha webui
+./start
 ```
 
 Select `gpt-codex-app` in the model menu or use `/model gpt-codex-app`.
@@ -75,21 +75,6 @@ classes from being silently auto-approved inside the separate MCP process.
 Inside the normal CLI/WebUI turn, the in-process bridge is used instead, so
 Kageha's tool policy and approval gate remain authoritative.
 
-To disable Kageha MCP attachment for diagnosis:
-
-```bash
-KAGEHA_CODEX_KAGEHA_MCP=0 uv run kageha webui
-```
-
-The MCP server also accepts explicit context when launched by another host:
-
-```bash
-uv run kageha mcp serve \
-  --project-root /path/to/project \
-  --session-id SESSION_ID \
-  --safe-only
-```
-
 ## Current boundaries
 
 - The runtime is opt-in and does not replace Kageha's normal durable loop.
@@ -106,7 +91,7 @@ uv run kageha mcp serve \
   result. Kageha's `nano_banana_*` tools remain available as a separate
   provider-backed image path.
 - App-server stdout uses a bounded 64 MiB JSONL reader so inline image results
-  do not exceed asyncio's small default line limit. Stderr is drained into a
+  can be decoded within the transport limit. Stderr is drained into a
   bounded diagnostic tail and included when the subprocess exits unexpectedly.
 
 ## Live contract tests

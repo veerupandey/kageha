@@ -41,7 +41,6 @@ cargo build --locked -p kageha-agent-sdk --examples
 "$component_bin"/examples/embed
 node --test sdk/typescript/client.test.mjs sdk/typescript/agent.test.mjs
 AGENT_SDK_LANGUAGES=typescript,rust node sdk/tests/agent_e2e.mjs
-# Deliberately separate: xtask release-gate remains red until full retained parity.
 
 node crates/kageha-runtime-service/tests/bridge_recovery_e2e.mjs
 node crates/kageha-loop/tests/standalone_runtime_ui_e2e.mjs

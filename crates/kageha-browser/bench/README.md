@@ -42,10 +42,7 @@ node crates/kageha-browser/bench/miniwob.mjs \
 
 `--transport=http` or `--transport=mcp` selects one path. The adversarial suite
 also accepts a comma-separated `--scenarios=dense,shadow,partial` for diagnosis.
-Both suites support `--seed-start=101` for separate validation seeds. After the
-runtime fixes, the MiniWoB subset was also run on seeds 101–105 through both
-transports, without further tuning; all 70 additional episodes passed.
-
+Both suites support `--seed-start=101` for separate validation seeds.
 ## What the gate measures
 
 | Layer | Coverage | Passing criterion |
@@ -78,60 +75,6 @@ The tests emit per-task results, seeds, transport, RPC count, duration, failures
 source revision and browser-binary SHA-256. Adversarial reports also include wrong
 effects and RPC latency distributions. Latency is diagnostic: these runs share a
 machine with other work and are not a controlled language-performance comparison.
-
-## Failures that drove runtime improvements
-
-| Reproduction | Before | Result after the fix |
-|---|---|---|
-| Original 12 adversarial scenarios, seeds 1–2, both transports | 40/48; dense targets and open shadow controls missing | All matching cases pass in the expanded run |
-| Partial obstruction, seeds 1–2, both transports | 0/4; center hit rejected an otherwise clickable button | Visible safe hit point selected before one click |
-| Seven public tasks, seeds 1–10, both transports | 138/140; two-button sequence seed 6 failed in both transports | Same episodes pass with obstruction-aware hit testing |
-| Script-backed anchor without `href`, both transports | 0/2; observed link rejected before dispatch | Observed anchor activates through the same safe hit testing |
-| Printable keyboard events, both transports | 0/2; punctuation rejected and shifted digits incorrect | Trusted key events and expected typed text verified |
-| Public terminal task, seeds 1–3, both transports | 4/6; dotted filenames could not be typed | 6/6 using visible `ls` output and native key presses |
-| Multi-select, both transports | 0/2; array values rejected | Exact selection, clearing, idempotence, invalid-value guards and batch path pass |
-
-The changes are general runtime behavior:
-
-- Expanded observations have their own bounded control/text budget and expose
-  later references. Reference resolution accepts the observation's bounded
-  control set instead of imposing the compact view's 18-reference limit.
-- Open shadow controls participate in observation and reference resolution.
-  Hit testing descends open roots, focus uses the control's own root, and disabled
-  composed ancestors remain enforced. Closed-root controls remain excluded.
-- Click preparation checks a bounded set of interior hit points. It dispatches
-  one click only after finding a point belonging to the intended surface. It
-  never probes an overlay by clicking it, and completely covered controls still
-  fail before input.
-
-Saved reports in `results/` retain the baseline and the current seeded runs.
-The fixture set expanded after the first baseline; compare matching scenario/seed/
-transport identities rather than comparing the two totals as identical workloads.
-
-Recorded final runs on 2026-11-07:
-
-| Suite | Result |
-|---|---|
-| 24 adversarial scenarios × 5 seeds × 2 transports | 240/240, zero wrong effects |
-| 7 public MiniWoB tasks × 10 seeds × 2 transports | 140/140 |
-| MiniWoB validation seeds 101–105 × 7 tasks × 2 transports | 70/70 |
-| Public MiniWoB terminal × 3 seeds × 2 transports | 6/6 |
-
-Rust unit tests, the native HTTP integration test, and Kageha's browser integration
-test also passed with the updated runtime. The Kageha integration used disposable
-Chrome/Comet fixture profiles and checked continuous preview, binding-aware paint
-acknowledgments, exact upload approval, control fencing and human handoff.
-The Rust host now exposes select/check tools, forwards frame scope, and sends
-focused-key actions using the native schema. Approval refresh requires the same
-document and backend DOM identity. The integration also checks multi-select,
-radio and punctuation-key input through approved agent tools.
-
-## Remaining evaluation work
-
-These are not full MiniWoB++, WebArena, VisualWebArena or WorkArena scores.
-The public subset covers seven task families. Full realistic web benchmarks need
-additional environment provisioning and LLM-agent evaluation. BrowserGym/AgentLab
-can provide that outer evaluation harness while browser execution remains Rust.
 
 ## Full catalog model evaluation
 
@@ -170,49 +113,9 @@ DeepSeek low-reasoning diagnostic is retained separately because repeated
 truncation prevented an action plan from being returned on harder episodes.
 Cloudflare defaults to 18 requests/minute, leaving headroom under its documented
 20 requests/minute standard frontier-model limit. `--rpm` overrides the pacing;
-HTTP 429 responses slow subsequent inference calls across all workers. An earlier
-60-RPM run is retained as `*-rate-diagnostic.json`, marked incomplete rather than
-reported as a completed model score. See [Cloudflare's limits](https://developers.cloudflare.com/workers-ai/platform/limits/).
+HTTP 429 responses slow subsequent inference calls across all workers. See [Cloudflare's limits](https://developers.cloudflare.com/workers-ai/platform/limits/).
 
-The initial full GPT-5.4 and Cloudflare DeepSeek runs (`*-before.json`) exposed
-provider transport failures and teardown isolation errors. They are diagnostic
-baselines, **not valid model rankings**. Browser and host-adapter changes from
-those runs include reference clicks on text fields/selects, observed read-only
-and checked states, document-scoped identity refresh, and keyboard action batching.
-Full model runs are defect-discovery passes, not a controlled model ranking:
-their binary hashes and reasoning modes differ as fixes are evaluated. In
-particular, the broad passes predate the final punctuation-key fix. Targeted
-regressions validate the patched capability separately. An independent model
-attempt still failed the terminal task even after native keys were fixed;
-successful deterministic control must not be reported as autonomous model success.
-
-Completed one-seed catalog passes on 2026-11-07:
-
-| Provider/model | Reasoning | Families attempted | Strict reward 1 | Positive reward | Provider/setup failures |
-|---|---|---:|---:|---:|---:|
-| OpenAI API / GPT-5.4 | low | 125 | 76 | 82 | 0 / 0 |
-| Cloudflare / DeepSeek V4.1 Flash 1017 | none | 125 | 62 | 68 | 0 / 0 |
-
-These runs exposed faults that were then patched. They are not scores for the
-final patched binary. Both requested models passed the patched `choose-list`
-and `click-scroll-list` retests, two tasks each; their full passes had failed the
-multi-select task. Calendar booking
-retests still failed to complete the workflow even after anchor clicks worked.
-Remaining model failures include multi-step email/calendar planning, premature
-completion claims, and precise visual interaction. Every report grades the
-original task outcome independently of the model's claim.
-
-Kageha's integration regression uses a deterministic provider fixture to verify
-its native tool/approval/preview contract. The live model catalog runs use the
-independent standalone adapter, not Kageha's task planner. The native Rust Kageha
-tool surface still needs parity qualification for the standalone runtime's
-script, scroll/drag, dialog and download capabilities. Broader held-out model
-runs and provisioned WebArena/WorkArena environments remain production gates.
-
-`preflight.mjs` checks external environment readiness without resetting sites or
-accepting gated access terms. WebArena currently lacks isolated site endpoints
-and images; WorkArena's instance configuration returned HTTP 403. Neither suite
-has a completed score. A local MiniWoB result must not be relabeled as either.
+The preflight runner checks whether external fixtures are configured. Reports default to `output/benchmarks/browser/`.
 
 Profile switching, uploads, leases, disconnect recovery and right-panel streaming
 have separate integration regressions. Run those alongside this gate:

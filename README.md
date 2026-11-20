@@ -6,7 +6,7 @@
 
 [![Kageha checking an incident in Chromium and updating a brief in the same chat](docs/assets/kageha-browser-demo.png)](https://github.com/veerupandey/kageha/releases)
 
-In the demo, Kageha turns a support backlog into a brief. A follow-up in the same conversation asks it to check an incident in Chromium, verify the latest update, and revise the original file.
+Open **Watch Kageha work (48-second MP4)** under the release assets. In the demo, Kageha turns a support backlog into a brief. A follow-up in the same conversation asks it to check an incident in Chromium, verify the latest update, and revise the original file.
 
 ## Features
 
@@ -56,9 +56,10 @@ The development server listens on [127.0.0.1:8788](http://127.0.0.1:8788) by def
 
 ## Guides
 
+- [Using Kageha](https://github.com/veerupandey/kageha/blob/main/docs/USAGE.md) covers chats, files, planning, and approvals.
 - [Linux deployment](docs/LINUX_DEPLOYMENT.md) covers service setup, HTTPS, SSH, and Docker.
 - [Browser setup](https://github.com/veerupandey/kageha/blob/main/docs/BROWSER.md) and [browser decisions](https://github.com/veerupandey/kageha/blob/main/crates/kageha-browser-decisions/README.md) cover browsing modes and typed model configuration.
 - [Personal companion](https://github.com/veerupandey/kageha/blob/main/integrations/personal/README.md) covers WhatsApp, iMessage, SMS, and voice setup.
-- [Agents and teams](https://github.com/veerupandey/kageha/blob/main/docs/AGENTS.md), [Rust components](https://github.com/veerupandey/kageha/blob/main/docs/ARCHITECTURE.md), and [SDKs](https://github.com/veerupandey/kageha/blob/main/sdk/README.md) cover configuration and integration.
+- [Agents and teams](https://github.com/veerupandey/kageha/blob/main/docs/AGENTS.md), [Rust architecture](https://github.com/veerupandey/kageha/blob/main/docs/ARCHITECTURE.md), and [SDKs](https://github.com/veerupandey/kageha/blob/main/sdk/README.md) cover configuration and integration.
 
 Released under the [MIT License](LICENSE).

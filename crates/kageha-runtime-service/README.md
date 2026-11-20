@@ -426,9 +426,7 @@ node crates/kageha-loop/tests/standalone_runtime_ui_e2e.mjs
 These use disposable model/tool fixtures and run Rust backend processes with an
 empty executable PATH. They cover the retained WebUI contracts, concurrent workers,
 cancellation, session replay/restart, and crashes between dispatch, receipt and
-completion publication. They are correctness evidence, not live-provider latency
-benchmarks. Research evidence and its limits are recorded in
-`../kageha-runtime/research/subagent-ui-integration.md`.
+completion publication.
 
 ## Independent specialist workers and workspace ports
 

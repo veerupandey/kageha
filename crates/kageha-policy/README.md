@@ -93,8 +93,7 @@ in the policy audit. Runtime-owned objective and steering provide user intent.
 
 Both WebUI composers expose the three profiles. The Rust API reports tool/workspace
 boundaries honestly: these profiles do **not** implement a Codex-equivalent OS
-sandbox or grant operating-system permissions. See the focused
-[Codex study](research/codex-permissions.md) for evidence and remaining parity.
+sandbox or grant operating-system permissions.
 
 ## Managed requirements and review recovery
 

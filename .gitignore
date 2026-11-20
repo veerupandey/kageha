@@ -57,8 +57,6 @@ scripts/probe_glm_reasoning.py
 scripts/browser_stream_spike.py
 scripts/embedded_webview_spike.py
 scripts/browser_e2e.py
-src/kageha/webui/frontend/node_modules/
-src/kageha/webui/frontend/dist/
 
 # Investigation reports and validation output stay local.
 /reports/

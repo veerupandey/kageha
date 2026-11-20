@@ -65,11 +65,3 @@ Lists support `page`; file text is limited to 150 KB and marked when truncated.
 GitHub's own limits also apply (large files, directory listings, and PR diffs).
 Binary files are not parsed. Returned repository content is untrusted data;
 agents should cite the returned GitHub links.
-
-## Verification
-
-Run `python -m pytest tests/test_github_integration.py tests/test_tool_packs.py`.
-In `src/kageha/webui/frontend`, run the IntegrationsSettings and SettingsDialog
-Vitest tests, then `npm run build`. Mocked integration tests cover HTTP routes,
-credential secrecy, access enforcement, token refresh, OAuth polling, and disconnect.
-A live private-repository smoke test requires the account owner to connect GitHub.

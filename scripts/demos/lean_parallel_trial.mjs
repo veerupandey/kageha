@@ -21,8 +21,8 @@ const output = path.resolve(
   option(
     "--output",
     light
-      ? "docs/audits/lean-parallel-light-live-2026-11-15.json"
-      : "docs/audits/lean-parallel-live-2026-11-15.json",
+      ? "output/benchmarks/lean-parallel-light-live-2026-11-15.json"
+      : "output/benchmarks/lean-parallel-live-2026-11-15.json",
   ),
 );
 if (fs.existsSync(output)) throw Error("Output already exists; choose a new --output path");

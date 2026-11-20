@@ -85,34 +85,16 @@ agent tool. Dynamic host context registration and durable daemon decision-budget
 checkpointing remain separate work; do not treat this as a multi-tenant hosted
 agent orchestrator. Input receipts already have their own native durability.
 
-### Portability regression evidence
+### Framework clients
 
-The standalone HTTP test configures decisions and verifies a 0.94 native confidence
-is accepted at the default 0.90 cutoff even though selected probability is 0.80.
-It rejects tool attempts to change the cutoff, and verifies proposals send no input.
-That test exposed and fixed missing control projection in the daemon's cached
-snapshot. Model workers now run outside an entered Tokio runtime, so standalone
-HTTP/MCP model calls use the same transport contract as Kageha's embedded path.
-Concurrent decision workers are bounded and retain cancellation/deadline controls.
+The [Python](../../sdk/python/README.md) and [TypeScript](../../sdk/typescript/README.md) SDK guides cover direct client setup. External MCP clients can discover the browser tools over the same owned session. Keep the session open across follow-ups and inspect any uncertain receipt before issuing more input.
 
-`examples/langgraph-browser/tests/test_decision_portability.py` runs an actual
-Python LangGraph agent through the official LangChain MCP adapter, with the native
-Rust daemon and real disposable Chromium. It tests both the default-confidence
-proposal and a stricter per-context cutoff that invokes the ordinary agent route.
-Both inspect a verified native receipt and produce exactly one physical field
-write, with no save or submission. The model providers are deterministic fixtures;
-this proves integration behavior, not real-model planning accuracy.
+Run the standalone API and typed-decision fixture with a disposable Chromium profile.
 
 ```sh
 KAGEHA_BROWSER_BIN=/absolute/path/kageha-browser \
   node crates/kageha-browser/tests/http_api.mjs
-KAGEHA_BROWSER_BIN=/absolute/path/kageha-browser \
-  uv run --directory examples/langgraph-browser pytest -q
 ```
-
-The complete external LangGraph regression suite passed **32 tests**. It requires
-no Kageha host and uses an empty daemon `PATH`. Only optional framework clients and
-test fixtures use Python; the browser and decision execution remain Rust.
 
 ## Authorized account recovery and generated passwords
 
@@ -303,62 +285,7 @@ Kageha's separate integration suite at
 `../kageha-loop/tests/webui_browser_e2e.mjs` accepts the same browser binary and
 checks the host path, including streamed previews and profile/control changes.
 
-## Comparison evidence and remaining release gates
-
-Review date 2026-11-07. These are architecture findings, not performance rankings.
-
-| Source | Established behavior | Rust design consequence |
-|---|---|---|
-| Codex shipped browser plugin 26.1103.31037 | Backend handshake precedes API construction; acquired tabs tracked; screenshot authority checked against explicit tab/current URL | Discover capabilities first; preserve exact identities; separate startup/connection/preview stages |
-| Antigravity desktop 2.29.0 | Injected authenticated host bridge; delayed tab restoration rechecks latest desired selection; centralized shared debugger ownership | Host integration through adapters; fence late results; coordinate preview/scripts/actions |
-| [Browser-Use tools integration](https://github.com/browser-use/browser-use/blob/main/skills/cloud/references/guides/tools-integration.md) | Existing agents can invoke individual browser tools while retaining their reasoning loop | Keep model orchestration outside this runtime |
-| [Playwright MCP](https://github.com/microsoft/playwright-mcp) | Structured accessibility snapshots; optional capability groups and agent integration | Advertise available features; keep observations compact; add typed MCP tools through the same engine |
-| [Vercel agent-browser refs](https://github.com/vercel-labs/agent-browser/blob/main/skill-data/core/references/snapshot-refs.md) | Surviving DOM refs persist; replaced/document refs invalidate without recycling IDs | Evaluate identity precision and token cost on dynamic forms rather than treating every layout update as navigation |
-
-Codex static evidence parent
-`ev_4e2d731641316cc5814578187e3f6c1d53ff6ee935cd1201c280b258696bb640`.
-Browser service SHA-256
-`0442cee0bb672f889e89d40a64123c589363a13d931954bb7364cd4231e8fdab`.
-Antigravity ASAR SHA-256
-`290e1b7a1caa430a0c5367c7b433e8d284e2ca5d0b305e91e5ce8ec926f43283`.
-Focused REA parents
-`ev_71a684b597f8227a3b5bae0bde177a07cccc2766c187f8233a46053ef59d6269`
-and `ev_8c59cc01602b35d8b2961bb82aa35011f380f70a3c3544915e84608d6d1f5abc`.
-Antigravity selected sources were hostBridgeServer, wcvBrowserRegistry,
-wcvIpcHandlers, guestDebugger, guestDialogController and packaged DevTools MCP.
-Static artifact inspection does not establish live website success or proprietary
-remote-server behavior. No competitor source was copied into this implementation.
-
-Required next gates before describing this as a complete general-purpose service:
-
-- Per-method JSON schemas and typed SDKs generated from one contract. The native
-  Rust MCP adapter currently exposes a generic browser method envelope; complete
-  per-action tool schemas and broader SDK/daemon compatibility tests remain.
-- Portable Rust library boundary, extraction/build CI, Linux/macOS packaging and
-  an explicit Windows roadmap. Independent binary build already exists.
-- Reproducible multi-turn fixture matrix covering rerenders, invalid IDs,
-  iframe/shadow controls, radios, selects, hydration, dialogs, uploads/downloads,
-  popup ownership, profile switches, human takeover, crash/reconnect and draft
-  preservation. Run the same scenarios through API and Kageha.
-- Public API lifecycle tests for client disconnect during input, lease expiry,
-  duplicate attempts, bounded idle connections, startup failure and restart.
-- Durable mutation-history compaction with replay protection across service
-  epochs. The current 4,096-attempt bound fails closed when full; polling does
-  not consume that quota. A production long-running service needs explicit
-  rotation/retention rather than silently forgetting uncertain attempts.
-- Service events for connection, binding, receipt and preview changes with
-  resumable cursors/backpressure, plus metrics and redacted diagnostics.
-- Explicit capability gaps and tests for network inspection/interception,
-  browser permissions, clipboard, storage state and authenticated downloads.
-  Existing low-level support is not evidence of complete cross-mode parity.
-- Measured soak, latency and resource budgets under simultaneous clients;
-  no claims that Rust alone makes website/network/model latency disappear.
-- Deployment isolation and API key rotation/authorization for multi-tenant use.
-
-A browser service cannot guarantee that every site accepts automation, that every
-session is authenticated, or that a remote transaction completes. Reliability here
-means bounded behavior, preserved state, precise outcomes, recoverable failures
-and tested integration contracts.
+## Receipt recovery
 
 ### Recoverable field actions
 
