@@ -14,10 +14,18 @@ struct Fake {
     fail: bool,
     preflight: bool,
     activity: Option<Arc<Mutex<Value>>>,
+    background: Option<Arc<Mutex<Value>>>,
 }
 impl DesktopBackend for Fake {
     fn input_activity(&mut self) -> Result<Option<Value>, String> {
         Ok(self.activity.as_ref().map(|v| v.lock().unwrap().clone()))
+    }
+    fn supports_background_accessibility(&self) -> bool {
+        self.background.is_some()
+    }
+    fn background_activity(&mut self, pid: u64, window: u64) -> Result<Value, String> {
+        assert_eq!((pid, window), (3, 4));
+        Ok(self.background.as_ref().unwrap().lock().unwrap().clone())
     }
     fn call(&mut self, method: &str, args: Value) -> Result<Value, String> {
         match method {
@@ -838,4 +846,71 @@ fn own_queued_key_state_without_external_revision_does_not_pause_lease() {
     );
     assert_eq!(result["receipt"]["state"], "verified");
     assert!(result.get("control").is_none());
+}
+
+#[test]
+fn background_input_ignores_other_apps_and_rechecks_target_after_approval() {
+    let directory = Directory::new();
+    let desktop = Arc::new(Mutex::new(json!({"available":true,"active":true,"revision":"physical-1"})));
+    let target = Arc::new(Mutex::new(json!({"available":true,"active":false,"revision":"target-1","coverage_revision":0})));
+    let backend = Fake {
+        activity: Some(desktop.clone()),
+        background: Some(target.clone()),
+        ..Default::default()
+    };
+    let mutations = backend.mutations.clone();
+    let mut controller = Controller::open(backend.clone(), &directory.journal()).unwrap();
+    controller.set_authorizer(|_, _, native| {
+        assert_eq!(native["background_only"], true);
+        Ok(())
+    });
+    let acquired = call(&mut controller, "acquire", json!({"ttl_ms":60000,"background":true}), "acquire-background");
+    let lease = acquired["lease_id"].as_str().unwrap();
+    let observe_args = json!({"lease_id":lease,"pid":3,"window_id":4});
+    let background_observe = |controller: &mut Controller<Fake>, id| {
+        call(controller, "observe", observe_args.clone(), id)
+    };
+    let execute = |controller: &mut Controller<Fake>, view: &Value, id| {
+        call(controller, "execute", json!({"lease_id":lease,"observation_id":view["observation_id"],
+            "action":{"method":"set_value","args":{"element_token":"native-element:1","value":"fixture"}}}), id)
+    };
+    let first = background_observe(&mut controller, "observe-first");
+    assert_eq!(first["status"], "ok", "{first}");
+    desktop.lock().unwrap()["revision"] = json!("physical-2");
+    let rejected = call(&mut controller, "execute", json!({"lease_id":lease,
+        "observation_id":first["observation_id"],"action":{"method":"press_key","args":{"key":"return"}}}), "no-shortcut");
+    assert_eq!(rejected["error"]["code"], "background_action_unavailable", "{rejected}");
+    let written = execute(&mut controller, &first, "background-write");
+    assert_eq!(written["receipt"]["state"], "verified", "{written}");
+    assert_eq!(*mutations.lock().unwrap(), 1);
+
+    let second = background_observe(&mut controller, "observe-second");
+    assert_eq!(second["status"], "ok", "{second}");
+    let activate = target.clone();
+    controller.set_authorizer(move |_, _, _| {
+        activate.lock().unwrap()["revision"] = json!("target-2");
+        Ok(())
+    });
+    let raced = execute(&mut controller, &second, "during-approval");
+    assert_eq!(raced["error"]["code"], "background_target_in_use", "{raced}");
+    assert!(raced["control"].is_null(), "{raced}");
+    assert_eq!(*mutations.lock().unwrap(), 1);
+
+    target.lock().unwrap()["active"] = json!(true);
+    let busy = background_observe(&mut controller, "observe-active");
+    assert_eq!(busy["error"]["code"], "background_target_in_use", "{busy}");
+    target.lock().unwrap()["active"] = json!(false);
+    assert_eq!(background_observe(&mut controller, "observe-returned")["status"], "ok");
+    target.lock().unwrap()["available"] = json!(false);
+    let interrupted = call(&mut controller, "activity", json!({}), "monitor-lost");
+    assert_eq!(interrupted["control"]["reason"], "monitor_unavailable");
+    drop(controller);
+
+    let mut restarted = Controller::open(backend, &directory.journal()).unwrap();
+    let info = call(&mut restarted, "info", json!({}), "info-after-restart");
+    assert_eq!(info["background_accessibility"], true);
+    assert_eq!(info["control"]["reason"], "monitor_unavailable");
+    let receipt = call(&mut restarted, "receipt", json!({"request_id":"background-write"}), "read-receipt");
+    assert_eq!(receipt["receipt"]["state"], "verified");
+    assert_eq!(*mutations.lock().unwrap(), 1);
 }

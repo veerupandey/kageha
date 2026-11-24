@@ -162,6 +162,7 @@ pub fn describe(code: &str) -> String {
 /// clients use this runtime directly. They never suggest repeating input.
 pub fn hint(code: &str) -> Option<&'static str> {
     Some(match code {
+        "browser_capacity_exceeded" => "The browser service is at its shared instance limit across chats. This chat can have zero tabs while other browsers occupy the slots. Closing a finished browser session can free a slot.",
         "tab_capacity_exceeded" => "The managed tab limit is 32. List managed tabs, select an existing tab, navigate a reusable tab, or explicitly close a completed tab. Do not repeat an open until capacity changes.",
         "tab_close_unconfirmed" => "Closure was not confirmed. List managed tabs to check the exact target before doing anything else. Do not repeat the close automatically.",
         "cdp_disconnected" => "The debugging connection was lost; this does not prove the tab closed or crashed. Read browser selection and observe the original managed tab. Do not open a replacement or repeat uncertain input.",
@@ -260,7 +261,7 @@ mod tests {
             "element_not_observed_in_main_frame", "frame_scope_unavailable", "observation_too_large",
             "input_postcondition_changed", "document_changed", "action_control_busy",
             "action_receipt_pending", "action_outcome_uncertain",
-            "tab_capacity_exceeded", "tab_close_unconfirmed", "cdp_disconnected", "target_not_owned",
+            "browser_capacity_exceeded", "tab_capacity_exceeded", "tab_close_unconfirmed", "cdp_disconnected", "target_not_owned",
             "cdp_unavailable", "browser_binding_changed", "observation_stale", "observation_expired",
         ];
         for code in codes {

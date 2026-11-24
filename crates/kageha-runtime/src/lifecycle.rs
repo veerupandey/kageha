@@ -1,4 +1,7 @@
 //! Hosting-independent session and worker lifecycle. Storage and execution are ports.
+pub(crate) mod worker_slots;
+pub use worker_slots::while_waiting;
+
 use kageha_contracts::{ErrorCode, Result, ServiceError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -189,6 +192,7 @@ pub struct Supervisor {
     started: AtomicBool,
     alive: AtomicUsize,
     publication: Mutex<()>,
+    slots: worker_slots::WorkerSlots,
     threads: Mutex<Vec<std::thread::JoinHandle<()>>>,
 }
 fn fault() -> ServiceError {
@@ -223,6 +227,7 @@ impl Supervisor {
             started: AtomicBool::new(false),
             alive: AtomicUsize::new(0),
             publication: Mutex::new(()),
+            slots: worker_slots::WorkerSlots::default(),
             threads: Mutex::new(Vec::new()),
         }))
     }
@@ -306,25 +311,32 @@ impl Supervisor {
         if self.started.swap(true, Ordering::SeqCst) {
             return Ok(());
         }
+        self.slots.set_base_threads(self.limits.per_depth);
         for depth in 0..=3 {
             for _ in 0..self.limits.per_depth {
-                let supervisor = Arc::clone(self);
-                self.alive.fetch_add(1, Ordering::SeqCst);
-                let worker = std::thread::Builder::new()
-                    .name(format!("kageha-runtime-{depth}"))
-                    .spawn(move || {
-                        supervisor.worker(depth);
-                        supervisor.alive.fetch_sub(1, Ordering::SeqCst);
-                    })
-                    .map_err(|_| {
-                        self.alive.fetch_sub(1, Ordering::SeqCst);
-                        self.stopping.store(true, Ordering::SeqCst);
-                        self.notify();
-                        fault()
-                    })?;
-                self.threads.lock().map_err(|_| fault())?.push(worker);
+                self.spawn_worker(depth).map_err(|_| {
+                    self.stopping.store(true, Ordering::SeqCst);
+                    self.notify();
+                    fault()
+                })?;
             }
         }
+        Ok(())
+    }
+    fn spawn_worker(self: &Arc<Self>, depth: u32) -> std::io::Result<()> {
+        let mut threads = self.threads.lock().map_err(|_| std::io::Error::other("Runtime threads unavailable"))?;
+        let supervisor = self.clone();
+        self.alive.fetch_add(1, Ordering::SeqCst);
+        let worker = std::thread::Builder::new()
+            .name(format!("kageha-runtime-{depth}"))
+            .spawn(move || {
+                supervisor.worker(depth);
+                supervisor.alive.fetch_sub(1, Ordering::SeqCst);
+            })
+            .inspect_err(|_| {
+                self.alive.fetch_sub(1, Ordering::SeqCst);
+            })?;
+        threads.push(worker);
         Ok(())
     }
     fn notify(&self) {
@@ -333,9 +345,13 @@ impl Supervisor {
             self.wake.1.notify_all();
         }
     }
-    fn worker(&self, depth: u32) {
+    fn worker(self: &Arc<Self>, depth: u32) {
         while !self.stopping.load(Ordering::SeqCst) {
             let observed = self.wake.0.lock().map(|v| *v).unwrap_or(0);
+            let Some(slot) = worker_slots::Slot::acquire(self, depth) else {
+                self.wait_for_work(observed);
+                continue;
+            };
             let claimed = self.store.claim(depth);
             if let Ok(Some(run)) = claimed {
                 let flag = Arc::new(AtomicBool::new(run.cancel_requested));
@@ -359,7 +375,7 @@ impl Supervisor {
                     })
                 } else {
                     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        self.executor.execute(&run, flag.clone())
+                        worker_slots::with_slot(Some(slot.clone()), || self.executor.execute(&run, flag.clone()))
                     }))
                     .unwrap_or_else(|_| {
                         Err(ServiceError::new(
@@ -419,18 +435,20 @@ impl Supervisor {
                     flags.remove(&run.spec.id);
                 }
                 let _ = self.flush();
+                drop(slot);
                 self.notify();
                 continue;
             }
+            drop(slot);
             let _ = self.flush();
-            if let Ok(version) = self.wake.0.lock() {
-                let _ =
-                    self.wake
-                        .1
-                        .wait_timeout_while(version, Duration::from_secs(1), |version| {
-                            *version == observed && !self.stopping.load(Ordering::SeqCst)
-                        });
-            }
+            self.wait_for_work(observed);
+        }
+    }
+    fn wait_for_work(&self, observed: u64) {
+        if let Ok(version) = self.wake.0.lock() {
+            let _ = self.wake.1.wait_timeout_while(version, Duration::from_secs(1), |version| {
+                *version == observed && !self.stopping.load(Ordering::SeqCst)
+            });
         }
     }
     pub fn cancel(&self, id: &str) -> Result<RunRecord> {

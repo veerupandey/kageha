@@ -1077,3 +1077,77 @@ fn permanent_descendant_contract_error_fences_admission_instead_of_retrying_fore
     while std::time::Instant::now()<until {if supervisor.stage(&spec("probe",0)).is_err(){fenced=true;break;}std::thread::sleep(Duration::from_millis(2));}
     stop(&supervisor);assert!(fenced,"permanent ancestry conflict must be surfaced as stopped admission");
 }
+
+#[test]
+fn an_exclusive_owner_question_lends_capacity_until_its_run_can_resume() {
+    use kageha_runtime::{execution::{Control, ToolCall, ToolPort, ToolReply}, fanout::execute_parallel};
+
+    #[derive(Default)]
+    struct Waiting {
+        question_shown: AtomicBool,
+        answered: AtomicBool,
+        returning: AtomicBool,
+        resumed: AtomicBool,
+        next_started: AtomicBool,
+        next_finished: AtomicBool,
+    }
+    impl ToolPort for Waiting {
+        fn discover(&self) -> std::io::Result<Vec<Value>> {
+            Ok(Vec::new())
+        }
+        fn execute(&self, _: &ToolCall, control: &Control<'_>) -> std::io::Result<ToolReply> {
+            while_waiting(|| {
+                self.question_shown.store(true, Ordering::SeqCst);
+                while !self.answered.load(Ordering::SeqCst) {
+                    control.check()?;
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+                self.returning.store(true, Ordering::SeqCst);
+                Ok(())
+            })?;
+            self.resumed.store(true, Ordering::SeqCst);
+            Ok(ToolReply::success("The original question was answered".into()))
+        }
+    }
+    impl RunExecutor for Waiting {
+        fn execute(&self, run: &RunRecord, cancel: Arc<AtomicBool>) -> Result<Completion> {
+            if run.spec.id == "original" {
+                let call = ToolCall {id: "question".into(), name: "ask_human".into(), arguments: json!({})};
+                execute_parallel(self, &[call], &Control {cancelled: &cancel, deadline: None}, 4)
+                    .map_err(|e| ServiceError::new(ErrorCode::Unavailable, e.to_string()))?;
+            } else {
+                self.next_started.store(true, Ordering::SeqCst);
+                while !self.next_finished.load(Ordering::SeqCst) && !cancel.load(Ordering::SeqCst) {
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+            }
+            Ok(Completion {state: RunState::Succeeded, result: Value::Null})
+        }
+        fn inspect(&self, _: &RunRecord) -> Result<Option<Completion>> { Ok(None) }
+        fn publish(&self, _: &RunRecord) -> Result<()> { Ok(()) }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let store = Arc::new(SqliteRunStore::open(&root.path().join("runtime.sqlite")).unwrap());
+    let executor = Arc::new(Waiting::default());
+    let supervisor = Supervisor::new(
+        store.clone(),
+        executor.clone(),
+        Limits {per_depth: 1, queue_per_depth: 8},
+    ).unwrap();
+    supervisor.stage(&spec("original", 0)).unwrap();
+    supervisor.activate("original").unwrap();
+    supervisor.start().unwrap();
+    wait(|| executor.question_shown.load(Ordering::SeqCst));
+    supervisor.stage(&spec("unrelated", 0)).unwrap();
+    supervisor.activate("unrelated").unwrap();
+    wait(|| executor.next_started.load(Ordering::SeqCst));
+    assert_eq!(store.get("original").unwrap().unwrap().state, RunState::Running);
+    executor.answered.store(true, Ordering::SeqCst);
+    wait(|| executor.returning.load(Ordering::SeqCst));
+    assert!(!executor.resumed.load(Ordering::SeqCst), "resume must wait for the one execution slot");
+    executor.next_finished.store(true, Ordering::SeqCst);
+    wait(|| store.get("original").unwrap().unwrap().state == RunState::Succeeded);
+    assert!(executor.resumed.load(Ordering::SeqCst));
+    assert_eq!(store.get("unrelated").unwrap().unwrap().state, RunState::Succeeded);
+    stop(&supervisor);
+}

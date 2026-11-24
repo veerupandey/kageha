@@ -504,8 +504,13 @@ func targetElement(_ args: [String: Any]) throws -> AXUIElement {
     try fail("element_token is required for native indexed actions")
   }
   guard snapshot.elements.indices.contains(index) else { try fail("element token is absent") }
-  _ = try exactWindow(pid, wid)
+  let row = try exactWindow(pid, wid)
   let element = snapshot.elements[index]
+  if args["background_only"] as? Bool == true {
+    let requested = try axWindow(pid, row)
+    guard axPID(element) == pid, let owner = containingWindow(element), CFEqual(owner, requested)
+    else { try fail("observed control no longer belongs to the background window") }
+  }
   guard attr(element, kAXEnabledAttribute) as? Bool != false else { try fail("observed control is disabled") }
   return element
 }
@@ -543,6 +548,7 @@ func performNativeMutation(_ element: AXUIElement, _ send: () -> AXError) throws
     throw NativeFailure(message: "cannot configure native action timeout", executionPhase: "not_dispatched")
   }
   defer { AXUIElementSetMessagingTimeout(element, 0.1) }
+  try checkIntervention()
   try performed(send())
 }
 func coordinate(_ args: [String: Any], _ x: String = "x", _ y: String = "y") throws -> CGPoint {
@@ -635,12 +641,21 @@ func focusableElement(_ args: [String: Any], _ pid: Int, _ row: [String: Any]) t
   return element
 }
 func validateAction(_ method: String, _ args: [String: Any]) throws {
-  if let expected=args["activity_revision"] as? String {try HumanInputMonitor.shared.require(expected)}
   guard AXIsProcessTrusted() else {
     try fail("Accessibility permission is not granted to this native helper")
   }
   let pid = try integer(args, "pid")
   let wid = try integer(args, "window_id")
+  let background = args["background_only"] as? Bool == true
+  if background {
+    guard args["element_token"] is String, args["delivery_mode"] as? String != "foreground",
+      ["click", "set_value", "type_text", "select_text", "perform_secondary_action"].contains(method),
+      args["activity_revision"] is String
+    else { try fail("background action unavailable") }
+  }
+  if let expected = args["activity_revision"] as? String {
+    try HumanInputMonitor.shared.require(expected, target: background ? (pid, wid) : nil)
+  }
   guard snapshots[key(session(args), pid, wid)] != nil else {
     try fail("stale observation: observe this window first")
   }
@@ -778,10 +793,6 @@ func prepareAction(_ method: String, _ args: [String: Any]) throws -> (Int, Int,
   return (pid, wid, row)
 }
 func action(_ method: String, _ args: [String: Any]) throws -> [String: Any] {
-  let previousActivity=activeInterventionRevision
-  activeInterventionRevision=args["activity_revision"] as? String
-  defer {activeInterventionRevision=previousActivity}
-  try checkIntervention()
   let prepared: (Int, Int, [String: Any])
   do { prepared = try prepareAction(method, args) }
   catch let failure as NativeFailure {
@@ -790,6 +801,12 @@ func action(_ method: String, _ args: [String: Any]) throws -> [String: Any] {
     throw NativeFailure(message: failure.message, executionPhase: "not_dispatched")
   }
   let (pid, wid, row) = prepared
+  let previousActivity = activeIntervention
+  activeIntervention = (args["activity_revision"] as? String).map {
+    ($0, args["background_only"] as? Bool == true ? (pid, wid) : nil)
+  }
+  defer { activeIntervention = previousActivity }
+  try checkIntervention()
   defer { if !executingBatch { snapshots.removeValue(forKey: key(session(args), pid, wid)) } }
   switch method {
   case "focus_element":
@@ -1055,7 +1072,17 @@ func call(_ request: [String: Any]) throws -> [String: Any] {
       _ = CGRequestListenEventAccess()
     } else { try fail("unsupported permission request") }
     return ["ok":true,"accessibility":AXIsProcessTrusted(),"screen_recording":CGPreflightScreenCaptureAccess(),"restart_may_be_required":true]
-  case "input_activity": return HumanInputMonitor.shared.snapshot()
+  case "input_activity":
+    if args["clear_background"] as? Bool == true {
+      HumanInputMonitor.shared.clearBackgroundTarget()
+      return ["ok": true]
+    }
+    if args["pid"] != nil || args["window_id"] != nil {
+      let pid = try integer(args, "pid")
+      let wid = try integer(args, "window_id")
+      return HumanInputMonitor.shared.snapshot(target: (pid, wid))
+    }
+    return HumanInputMonitor.shared.snapshot()
   case "check_permissions":
     return [
       "ok": true, "accessibility": AXIsProcessTrusted(),

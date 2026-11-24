@@ -39,6 +39,7 @@ pub const METHODS: &[&str] = &[
     "read_page",
 ];
 const MAX_UNCONFIGURED_BROWSERS: usize = 16;
+const EMPTY_BROWSER_IDLE: Duration = Duration::from_secs(15 * 60);
 const MAX_TABS: usize = 32;
 const PROFILE_PROBE_TIMEOUT: Duration = Duration::from_secs(1);
 // A managed profile may have to start an SSH or Docker command before CDP responds.
@@ -252,6 +253,7 @@ struct PanelRequest {
 struct Workspace {
     active: String,
     before_machine: Option<String>,
+    last_used: Option<Instant>,
     profiles: HashMap<String, Browser>,
     revision: u64,
     canary_epoch: Option<String>,
@@ -656,6 +658,7 @@ impl Browsers {
         {
             let mut workspaces = self.workspaces.lock().await;
             if let Some(ws) = workspaces.get_mut(&request.workspace_id) {
+                ws.last_used = Some(Instant::now());
                 if ws.active == "machine" && ws.before_machine.is_some() {
                     let endpoint_matches = machine.as_ref().is_some_and(|adapter| {
                         ws.selected().is_some_and(|browser| {
@@ -837,7 +840,13 @@ impl Browsers {
                     >= MAX_UNCONFIGURED_BROWSERS
                 && !endpoint.as_deref().and_then(cdp::endpoint_port).is_some_and(|port|workspaces.values().any(|ws|ws.profiles.get(&profile).is_some_and(|browser|browser.port==port&&browser.process.is_none())))
             {
-                return Err("browser_capacity_exceeded");
+                if machine.is_some()
+                    || endpoint.is_some()
+                    || self.executable.is_none()
+                    || !self.reclaim_empty_browser(&mut workspaces, workspace).await
+                {
+                    return Err("browser_capacity_exceeded");
+                }
             }
             let allow_web = matches!(
                 self.action_backend,
@@ -904,6 +913,7 @@ impl Browsers {
             let ws = workspaces
                 .entry(workspace.clone())
                 .or_insert_with(|| self.empty_workspace());
+            ws.last_used = Some(Instant::now());
             let mut changed = ws.active != profile;
             if let Some((port, path, transport, fixed_target)) = attachment {
                 match ws.profiles.get_mut(&profile) {
@@ -1646,6 +1656,47 @@ impl Browsers {
             browser.transport = Some(cdp);
         }
         result
+    }
+
+    async fn reclaim_empty_browser(
+        &self,
+        workspaces: &mut HashMap<String, Workspace>,
+        current: &str,
+    ) -> bool {
+        let mut candidates: Vec<_> = workspaces.iter().filter_map(|(id, workspace)| {
+            let idle_since = workspace.last_used?;
+            let browser = workspace.profiles.get("private")?;
+            let downloading = browser.download_view.as_ref()
+                .is_some_and(|(active, _)| active.strong_count() > 0);
+            (id != current && browser.process.is_some() && !downloading
+                && idle_since.elapsed() >= EMPTY_BROWSER_IDLE).then_some((idle_since, id.clone()))
+        }).collect();
+        candidates.sort_unstable();
+        let candidate = tokio::time::timeout(Duration::from_secs(2), async {
+            for (_, id) in candidates {
+                let browser = &workspaces[&id].profiles["private"];
+                let empty = async {
+                    let mut connection = browser.connect().await?;
+                    let reply = connection.call(None, "Target.getTargets", json!({})).await?;
+                    Ok::<_, &'static str>(reply["targetInfos"].as_array().is_some_and(|targets| {
+                        targets.iter().all(|target| {
+                            target["type"] != "page" || target["url"] == "about:blank"
+                        })
+                    }))
+                };
+                if matches!(tokio::time::timeout(PROFILE_PROBE_TIMEOUT, empty).await, Ok(Ok(true))) {
+                    return Some(id);
+                }
+            }
+            None
+        }).await.ok().flatten();
+        let Some(id) = candidate else { return false };
+        let workspace = workspaces.get_mut(&id).unwrap();
+        let browser = workspace.profiles.remove("private").unwrap();
+        if workspace.active == "private" {
+            workspace.revision = self.next_revision();
+        }
+        browser.close().await.is_ok()
     }
 
     async fn selection(&self, workspace: &str) -> Result<Value> {

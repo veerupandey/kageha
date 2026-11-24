@@ -37,8 +37,8 @@ const provider=http.createServer(async(req,res)=>{
   const statusOnly=prompt.includes('status-only');
   let message;
   if(!tool){
-    const name=denied?'computer_execute':control||decline?'computer_request_control':target&&!statusOnly?'computer_observe':'computer_info';
-    const args=denied?{observation_id:'never',method:'press_key',args:{key:'return'}}:control||decline?{reason:'Check the turn-scoped grant on this disposable host'}:target&&!statusOnly?{pid:target.pid,window_id:target.window_id,include_screenshot:false}:{};
+    const name=denied?'computer_execute':control||decline?'computer_request_control':target&&!statusOnly?'computer_inspect':'computer_info';
+    const args=denied?{observation_id:'never',method:'set_value',args:{element_token:'never',value:'fixture'}}:control||decline?{reason:'Check the turn-scoped grant on this disposable host'}:target&&!statusOnly?{pid:target.pid,window_id:target.window_id,include_screenshot:false}:{};
     message={role:'assistant',content:null,tool_calls:[{id:'first',type:'function',function:{name,arguments:JSON.stringify(args)}}]};
   }else if(decline){assert.match(tool.content,/Desktop access declined/);message={role:'assistant',content:'Desktop access declined.'};
   }else if(control){assert.equal(JSON.parse(tool.content).input_authorized,true);message={role:'assistant',content:'Turn-scoped control granted.'};
@@ -81,7 +81,7 @@ try{
   const awaiting=api('/api/chat/send',{session_id:askChat,client_request_id:'decline-input',message:'decline-input Check desktop permission'});
   const pending=await until(async()=>(await api(`/api/sessions/${askChat}`)).pending_approval);
   assert.equal(pending.action,'computer_request_control');
-  assert.match(pending.detail,/keyboard and pointer control/);
+  assert.match(pending.detail,/background Accessibility actions/);
   await api('/api/approvals',{approval_id:pending.approval_id,approved:false,scope:'once'});
   assert.match((await awaiting).message,/Desktop access declined/);
   assert.equal((await api(`/api/sessions/${askChat}/computer`)).inputAuthorized,false);

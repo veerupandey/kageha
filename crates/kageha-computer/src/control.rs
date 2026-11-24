@@ -55,6 +55,7 @@ pub struct Controller<B> {
     sequence: u64,
     hold: Option<String>,
     activity_revision: Option<String>,
+    background_coverage: Option<u64>,
     authorize: Option<Authorizer>,
     capture_root: std::path::PathBuf,
     captures: std::collections::VecDeque<(String, std::path::PathBuf)>,
@@ -64,6 +65,8 @@ struct Lease {
     owner: String,
     token: String,
     expires: Instant,
+    background: bool,
+    target: Option<(u64, u64)>,
 }
 struct Preview {
     owner: String,
@@ -247,6 +250,7 @@ impl<B: DesktopBackend> Controller<B> {
                 sequence: 0,
                 hold,
                 activity_revision: None,
+                background_coverage: None,
                 authorize: None,
                 capture_root,
                 captures: Default::default(),
@@ -259,9 +263,13 @@ impl<B: DesktopBackend> Controller<B> {
     }
     fn pause_for_intervention(&mut self, reason: &str) -> Result<(), String> {
         self.hold = Some(reason.into());
+        if self.background_lease() {
+            self.backend.clear_background_activity();
+        }
         self.lease = None;
         self.observation = None;
         self.activity_revision = None;
+        self.background_coverage = None;
         // The armed marker remains set if persisting the reason fails, so a
         // restart still requires operator review instead of clearing authority.
         self.persist_control("hold", reason)
@@ -269,23 +277,50 @@ impl<B: DesktopBackend> Controller<B> {
     fn sample_activity(&mut self) -> Result<Option<Value>, String> {
         let activity = self.backend.input_activity()?;
         if let Some(value) = activity.as_ref() {
-            if value["available"] != true
-                || !value["revision"]
-                    .as_str()
-                    .is_some_and(|s| !s.is_empty() && s.len() <= 256)
-                || !value["active"].is_boolean()
-            {
-                return Err(if value["unavailable_reason"] == "secure_input" { "macOS Secure Input is active; finish the secure input session before returning computer control" } else { "Human-input monitoring is unavailable; enable Input Monitoring for Kageha Computer" }.into());
-            }
+            Self::check_activity(value)?;
         } else if self.backend.desktop_id().is_some() {
             return Err("Production adapter has no human-input monitor".into());
         }
         Ok(activity)
     }
+    fn check_activity(value: &Value) -> Result<(), String> {
+        if value["available"] != true
+            || !value["revision"].as_str().is_some_and(|s| !s.is_empty() && s.len() <= 256)
+            || !value["active"].is_boolean()
+        {
+            return Err(if value["unavailable_reason"] == "secure_input" { "macOS Secure Input is active; finish the secure input session before returning computer control" } else { "Human-input monitoring is unavailable; enable Input Monitoring for Kageha Computer" }.into());
+        }
+        Ok(())
+    }
+    fn background_lease(&self) -> bool {
+        self.lease.as_ref().is_some_and(|lease| lease.background)
+    }
+    fn background_activity(&mut self, pid: u64, window: u64) -> Result<Value, String> {
+        let value = self.backend.background_activity(pid, window)?;
+        Self::check_activity(&value)?;
+        if !value["coverage_revision"].is_u64() {
+            return Err("Background input monitoring did not report coverage".into());
+        }
+        Ok(value)
+    }
     fn sync_activity(&mut self) -> Result<(), String> {
         let Some(expected) = self.activity_revision.clone() else {
             return Ok(());
         };
+        if let Some((pid, window)) = self.lease.as_ref().and_then(|lease| lease.target) {
+            match self.background_activity(pid, window) {
+                Ok(value) if value["coverage_revision"].as_u64() != self.background_coverage => {
+                    self.pause_for_intervention("monitor_unavailable")?;
+                }
+                Ok(value) if value["active"] == false && value["revision"] == expected => {}
+                Ok(_) => {
+                    self.observation = None;
+                    self.activity_revision = None;
+                }
+                Err(_) => self.pause_for_intervention("monitor_unavailable")?,
+            }
+            return Ok(());
+        }
         match self.sample_activity() {
             // Hardware state can briefly include our own posted key-down before its
             // queued key-up is processed. Once monitoring has started, external
@@ -314,6 +349,7 @@ impl<B: DesktopBackend> Controller<B> {
         self.lease = None;
         self.observation = None;
         self.activity_revision = None;
+        self.background_coverage = None;
         Ok(())
     }
 
@@ -378,9 +414,13 @@ impl<B: DesktopBackend> Controller<B> {
     /// Host-only takeover, deliberately absent from the agent operation catalog.
     /// It prevents later input; an OS call already entered cannot be cancelled.
     pub fn take_control(&mut self) {
+        if self.background_lease() {
+            self.backend.clear_background_activity();
+        }
         self.lease = None;
         self.observation = None;
         self.activity_revision = None;
+        self.background_coverage = None;
         if self.hold.is_none() {
             let _ = self.persist_control("armed", "0");
         }
@@ -457,7 +497,7 @@ impl<B: DesktopBackend> Controller<B> {
             return Ok(
                 json!({"status":"ok","protocol":2,"service_epoch":self.epoch,"process_id":std::process::id(),"operations":OPERATIONS,"actions":ACTIONS,
                 "limits":{"lease_ms":60000,"observation_ms":30000,"receipts":MAX_RECEIPTS},
-                "host_takeover":true,"input_authorized":self.authorize.is_some(),"automatic_input_retry":false,"tenant_isolation":"one trusted desktop owner per process"}),
+                "host_takeover":true,"input_authorized":self.authorize.is_some(),"background_accessibility":self.backend.supports_background_accessibility(),"automatic_input_retry":false,"tenant_isolation":"one trusted desktop owner per process"}),
             );
         }
         // Receipt lookup intentionally survives epoch changes. It cannot dispatch.
@@ -493,8 +533,15 @@ impl<B: DesktopBackend> Controller<B> {
                 Ok(json!({"status":"ok","result":self.backend.input_activity()?}))
             }
             "acquire" => {
-                fields(args, &["ttl_ms"])?;
+                fields(args, &["ttl_ms", "background"])?;
                 let ttl = positive(args, "ttl_ms", 60000)?;
+                let background = match args.get("background") {
+                    Some(value) => value.as_bool().ok_or("background must be boolean")?,
+                    None => false,
+                };
+                if background && !self.backend.supports_background_accessibility() {
+                    return Ok(error("background_action_unavailable", "Update the Mac computer helper for background Accessibility input"));
+                }
                 if self.hold.is_some() {
                     return Ok(error(
                         "human_intervention",
@@ -511,13 +558,17 @@ impl<B: DesktopBackend> Controller<B> {
                         "desktop already has a live owner; renew or explicitly release it",
                     ));
                 }
+                if self.background_lease() {
+                    self.backend.clear_background_activity();
+                }
                 self.activity_revision = if self.authorize.is_some() {
                     match self.sample_activity() {
-                        Ok(Some(value)) if value["active"] == false => {
+                        Ok(Some(value)) if background || value["active"] == false => {
                             self.persist_control("armed", "1")?;
-                            Some(value["revision"].as_str().unwrap().into())
+                            (!background).then(|| value["revision"].as_str().unwrap().into())
                         }
-                        Ok(None) => None,
+                        Ok(None) if !background => None,
+                        Ok(None) => return Ok(error("input_monitor_unavailable", "Background input requires an active input monitor")),
                         Ok(Some(_)) => {
                             self.pause_for_intervention("human_input")?;
                             return Ok(error(
@@ -539,6 +590,8 @@ impl<B: DesktopBackend> Controller<B> {
                     owner: who,
                     token: token.clone(),
                     expires: Instant::now() + Duration::from_millis(ttl),
+                    background,
+                    target: None,
                 });
                 self.observation = None;
                 Ok(json!({"status":"ok","lease_id":token,"expires_in_ms":ttl}))
@@ -708,6 +761,22 @@ impl<B: DesktopBackend> Controller<B> {
         self.observation = None;
         let native_session = format!("control-{}", self.epoch);
         let token = self.token("observation");
+        if self.background_lease() {
+            self.activity_revision = None;
+            let activity = match self.background_activity(pid, window) {
+                Ok(value) => value,
+                Err(message) => {
+                    self.pause_for_intervention("monitor_unavailable")?;
+                    return Ok(error("input_monitor_unavailable", &message));
+                }
+            };
+            if activity["active"] == true {
+                return Ok(background_target_in_use());
+            }
+            self.lease.as_mut().unwrap().target = Some((pid, window));
+            self.activity_revision = activity["revision"].as_str().map(str::to_owned);
+            self.background_coverage = activity["coverage_revision"].as_u64();
+        }
         let mut native = json!({"pid":pid,"window_id":window,"session":native_session,"include_screenshot":screenshot,"include_accessibility_tree":true,"max_elements":max_elements,"max_image_dimension":max_image_dimension,"image_format":format,"follow_focus":false});
         let capture = if screenshot {
             private_capture_directory(&self.capture_root)?;
@@ -730,6 +799,19 @@ impl<B: DesktopBackend> Controller<B> {
             }
             Err(message) => return Ok(error("observation_failed", &message)),
         };
+        if self.background_lease() {
+            self.sync_activity()?;
+            if self.activity_revision.is_none() {
+                if let Some(path) = capture.as_ref() {
+                    let _ = std::fs::remove_file(path);
+                }
+                return Ok(if self.hold.is_some() {
+                    error("input_monitor_unavailable", "Input monitoring stopped during observation")
+                } else {
+                    background_target_in_use()
+                });
+            }
+        }
         // Never silently switch to a different modal/window.
         if value["pid"] != pid || value["window_id"] != window {
             return Ok(error(
@@ -811,6 +893,10 @@ impl<B: DesktopBackend> Controller<B> {
                 "desktop lease expired or belongs to another owner",
             ));
         }
+        let background = self.background_lease();
+        if background && self.activity_revision.is_none() {
+            return Ok(background_target_in_use());
+        }
         let observed = match self.observation.as_ref() {
             Some(observed)
                 if observed.owner == who
@@ -837,6 +923,12 @@ impl<B: DesktopBackend> Controller<B> {
         }
         let mut native = action["args"].clone();
         validate_action(method, &native)?;
+        if background {
+            if let Err(message) = validate_background_action(method, &native) {
+                return Ok(error("background_action_unavailable", &message));
+            }
+            native["background_only"] = json!(true);
+        }
         if let Some(element) = native["element_token"].as_str() {
             if !observed.elements.contains(element) {
                 return Ok(error(
@@ -869,6 +961,9 @@ impl<B: DesktopBackend> Controller<B> {
                 "human_intervention",
                 "Human input interrupted host approval; no input sent",
             ));
+        }
+        if background && self.activity_revision.is_none() {
+            return Ok(background_target_in_use());
         }
         // Approval callbacks can wait for a human. Do not let that wait extend
         // the lease or silently refresh an observation selected before approval.
@@ -908,6 +1003,7 @@ impl<B: DesktopBackend> Controller<B> {
             .map_err(|e| e.to_string())?;
         self.sync_activity()?;
         let intervention = self.hold.is_some();
+        let target_in_use = background && !intervention && self.activity_revision.is_none();
         let lease_expired = !self.lease_valid(who, args);
         let observation_expired = self
             .observation
@@ -915,7 +1011,7 @@ impl<B: DesktopBackend> Controller<B> {
             .is_none_or(|observation| observation.at.elapsed() > Duration::from_secs(30));
         if lease_expired || observation_expired {
             self.observation = None;
-            let reply = json!({"status":"error","execution_phase":"not_dispatched","receipt":{"request_id":request_id,"service_epoch":self.epoch,"state":"not_dispatched"},"error":{"code":if intervention {"human_intervention"} else if lease_expired { "lease_invalid" } else { "observation_stale" },"message":"Authority or observation expired during durable admission; no input sent"},"retryable":false});
+            let reply = json!({"status":"error","execution_phase":"not_dispatched","receipt":{"request_id":request_id,"service_epoch":self.epoch,"state":"not_dispatched"},"error":{"code":if intervention {"human_intervention"} else if target_in_use {"background_target_in_use"} else if lease_expired { "lease_invalid" } else { "observation_stale" },"message":"Authority or observation changed during durable admission; no input sent"},"retryable":false});
             let _ = self.journal.execute(
                 "UPDATE receipts SET response=? WHERE owner=? AND request_id=?",
                 params![reply.to_string(), who, request_id],
@@ -954,6 +1050,9 @@ impl<B: DesktopBackend> Controller<B> {
         if let Some(message) = message {
             reply["error"] = json!({"code":if state == "not_dispatched" { "native_preflight_refused" } else { "native_outcome_unknown" },"message":message});
         }
+        if background && self.hold.is_none() && self.activity_revision.is_none() {
+            reply["background_target_in_use"] = json!(true);
+        }
         if self
             .journal
             .execute(
@@ -968,6 +1067,20 @@ impl<B: DesktopBackend> Controller<B> {
         }
         Ok(reply)
     }
+}
+
+fn background_target_in_use() -> Value {
+    error("background_target_in_use", "The target app is in use. Switch to another app and observe the target again.")
+}
+
+pub fn validate_background_action(method: &str, args: &Value) -> Result<(), String> {
+    if args["element_token"].is_string()
+        && args["delivery_mode"] != "foreground"
+        && matches!(method, "click" | "set_value" | "type_text" | "select_text" | "perform_secondary_action")
+    {
+        return Ok(());
+    }
+    Err("Background action unavailable. Use an observed Accessibility control or pause this action.".into())
 }
 
 /// Structural preflight only: does not authorize input or resolve live handles.

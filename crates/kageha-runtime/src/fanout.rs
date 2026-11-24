@@ -1,5 +1,6 @@
 //! Bounded, work-conserving tool dispatch. Adapters own permissions and durable receipts.
 use crate::execution::*;
+use crate::lifecycle::worker_slots::{current_slot, with_slot};
 use std::{io, sync::mpsc};
 
 /// Serialize conflicting resources and global barriers in model order, while
@@ -60,14 +61,22 @@ pub fn execute_parallel(
                     let tx = tx.clone();
                     let call = &calls[index];
                     let budget = kageha_contracts::request_budget::current();
+                    // An exclusive tool owns the whole batch while the run's
+                    // worker waits for it. It may lend that worker's slot.
+                    let slot = match &access[index] {
+                        DispatchAccess::Exclusive => current_slot(),
+                        DispatchAccess::Resource(_) => None,
+                    };
                     // Builder returns an admission error instead of panicking on OS thread exhaustion.
                     match std::thread::Builder::new()
                         .name("kageha-tool".into())
                         .spawn_scoped(scope, move || {
                             let result =
-                                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kageha_contracts::request_budget::inherited(budget, || {
-                                    control.check()?;
-                                    tools.execute(call, control)
+                                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| with_slot(slot, || {
+                                    kageha_contracts::request_budget::inherited(budget, || {
+                                        control.check()?;
+                                        tools.execute(call, control)
+                                    })
                                 })));
                             let panicked = result.is_err();
                             let result = result.unwrap_or_else(|_| {

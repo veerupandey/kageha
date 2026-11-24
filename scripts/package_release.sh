@@ -37,6 +37,11 @@ mkdir -p "$root/docs/assets"
 install -m 644 docs/assets/kageha-browser-demo.png "$root/docs/assets/"
 install -m 644 docs/LINUX_DEPLOYMENT.md "$root/docs/"
 if [[ "$os" == Darwin ]]; then
+  cargo build --locked --release -p kageha-computer --bin kageha-computer
+  mkdir -p "$root/share/kageha/macos"
+  crates/kageha-computer/scripts/package_macos.sh \
+    --binary "$(cd "$release_dir" && pwd)/kageha-computer" \
+    --output "$root/share/kageha/macos/Kageha Computer.app" --ad-hoc
   cp "$root/start" "$root/Start Kageha.command"
   cp "$root/start" "$root/Sign in.command"
 else

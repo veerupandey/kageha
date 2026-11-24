@@ -82,6 +82,10 @@ pub struct ModelRequest {
     #[serde(default)]
     pub role: Role,
 }
+
+/// Host instruction for a standalone, tool-free answer. Provider adapters use
+/// it to recognize the compact request without changing the runtime wire format.
+pub const DIRECT_ANSWER_INSTRUCTION: &str = "Answer directly and concisely.";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AssistantMessage {

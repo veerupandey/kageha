@@ -36,6 +36,7 @@ struct Held {
     lease: String,
     until: Instant,
     observation: Option<Value>,
+    target_in_use: bool,
 }
 static INPUT_OVERRIDE: AtomicU8 = AtomicU8::new(0);
 static USER_CONTROL: AtomicBool = AtomicBool::new(false);
@@ -215,6 +216,13 @@ fn call(desktop: &mut Desktop, op: &str, args: Value, request: &str) -> io::Resu
         desktop.held = None;
         desktop.frames.clear();
         desktop.interruption = reply["control"]["reason"].as_str().map(str::to_owned);
+    } else if let Some(held) = desktop.held.as_mut() {
+        if reply["error"]["code"] == "background_target_in_use" || reply["background_target_in_use"] == true {
+            held.target_in_use = true;
+            held.observation = None;
+        } else if op == "observe" && reply["status"] == "ok" {
+            held.target_in_use = false;
+        }
     }
     Ok(reply)
 }
@@ -287,10 +295,14 @@ fn desktop_available_for(desktop: Option<&Desktop>, chat: &str, turn: &str) -> i
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Desktop input was revoked. Ask the user to enable agent control in the Computer panel."));
     }
     if USER_CONTROL.load(Ordering::SeqCst) || desktop.is_some_and(|d| d.interruption.is_some()) {
-        return Err(io::Error::new(
-            io::ErrorKind::PermissionDenied,
-            "The user has desktop control. Ask them to return control in the Computer panel.",
-        ));
+        let reason = desktop.and_then(|d| d.interruption.as_deref());
+        let message = match reason {
+            Some("human_input") => "Kageha paused native Mac input after detecting physical mouse or keyboard activity. Ask the user to return control in the Computer panel.",
+            Some("monitor_unavailable") => "Kageha paused native Mac input because it could not monitor physical input. Ask the user to check the Computer panel.",
+            Some("helper_disconnected" | "helper_restarted") => "Kageha paused native Mac input after the computer helper disconnected or restarted. Ask the user to return control in the Computer panel.",
+            _ => "The user has desktop control. Ask them to return control in the Computer panel.",
+        };
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, message));
     }
     if desktop.and_then(|d| d.input_turn.as_ref()).is_some_and(|(owner, active_turn)| owner != chat || active_turn != turn) {
         return Err(io::Error::other("Another turn has desktop control"));
@@ -401,7 +413,7 @@ fn request_desktop_access(
     let detail = match (bundle, reveal) {
         (_, Some(path)) => format!("Reveal {path} in Finder. {reason}"),
         (Some(id), None) => format!("Open installed application {id} for this task. {reason}"),
-        (None, None) => format!("Enable keyboard and pointer control for this chat turn. {reason}"),
+        (None, None) => format!("Enable background Accessibility actions for this chat turn. {reason}"),
     };
     let mut context = json!({"resource":bundle.unwrap_or("desktop-input"),"reason":reason,"turn":turn,"authority_generation":revision});
     if let Some(path) = reveal { context["reveal_path"] = json!(path); }
@@ -481,6 +493,7 @@ pub(crate) fn tool(
         with_desktop(|desktop| desktop_available_for(Some(desktop), chat, turn))?;
         return request_desktop_access(db, chat, turn, request, cancel, |id, reveal| {
             let mut open = std::process::Command::new("/usr/bin/open");
+            open.arg("-g");
             if let Some(path) = reveal { open.args(["-R", path]); } else { open.args(["-b", id]); }
             open.status().map(|s| s.success())
         });
@@ -493,6 +506,8 @@ pub(crate) fn tool(
             .as_str()
             .ok_or_else(|| io::Error::other("native action method required"))?;
         kageha_computer::control::validate_action(method, &args["args"])
+            .map_err(io::Error::other)?;
+        kageha_computer::control::validate_background_action(method, &args["args"])
             .map_err(io::Error::other)?;
         let action = json!({"method":method,"args":args["args"]});
         let original = with_desktop(|desktop| {
@@ -576,6 +591,12 @@ pub(crate) fn tool(
         "computer_apps" => call(desktop,"list_apps",json!({}),&id),
         "computer_windows" => call(desktop,"list_windows",json!({"pid":args["pid"]}),&id),
         "computer_observe" => {
+            if desktop.client.info()["background_accessibility"] != true {
+                return Err(io::Error::other("Update the Mac computer helper for background Accessibility input. Use computer_inspect to read the target window."));
+            }
+            if desktop.client.info()["input_authorized"] != true {
+                return Err(io::Error::other("Call computer_request_control for input authorization, or use computer_inspect for a read-only view."));
+            }
             if USER_CONTROL.load(Ordering::Relaxed) { return Err(io::Error::other("User has computer control")); }
             if desktop.held.as_ref().is_some_and(|held| held.until <= Instant::now()) { desktop.held = None; }
             if desktop.held.as_ref().is_some_and(|held| held.chat != chat) { return Err(io::Error::other("Another chat owns the physical desktop")); }
@@ -584,8 +605,8 @@ pub(crate) fn tool(
                 let lease = held.lease.clone();
                 successful(call(desktop,"renew",json!({"lease_id":lease,"ttl_ms":60000}),&id)?)?;
             } else {
-                let acquired = successful(call(desktop,"acquire",json!({"ttl_ms":60000}),&id)?)?;
-                desktop.held = Some(Held { chat:chat.into(), lease:acquired["lease_id"].as_str().ok_or_else(||io::Error::other("lease missing"))?.into(), until:Instant::now()+Duration::from_secs(60), observation:None });
+                let acquired = successful(call(desktop,"acquire",json!({"ttl_ms":60000,"background":true}),&id)?)?;
+                desktop.held = Some(Held { chat:chat.into(), lease:acquired["lease_id"].as_str().ok_or_else(||io::Error::other("lease missing"))?.into(), until:Instant::now()+Duration::from_secs(60), observation:None, target_in_use:false });
             }
             let lease = desktop.held.as_ref().unwrap().lease.clone();
             let mut native = args.clone(); native["lease_id"] = json!(lease);
@@ -757,6 +778,7 @@ pub(crate) fn status(chat: &str) -> Value {
         .filter(|held| held.chat == chat && held.until > Instant::now());
     json!({"sessionId":chat,"provider":"local_mac","runtime":"rust","native_adapter":"swift",
         "available":configured(),"connected":desktop.is_some_and(|d| !d.client.is_closed()),"serviceEpoch":desktop.map(|d| d.client.service_epoch()),"interruptionReason":desktop.and_then(|d| d.interruption.as_ref()),"canControl":input_enabled(),"canTakeControl":configured(),"inputAuthorized":input_enabled() || desktop.and_then(|d| d.input_turn.as_ref()).is_some_and(|(owner,_)|owner == chat),
+        "backgroundTargetInUse":held.is_some_and(|held| held.target_in_use),
         "agentBound":held.is_some(),"lockedBy":if USER_CONTROL.load(Ordering::Relaxed) {json!("user")}else if held.is_some(){json!("agent")}else{Value::Null},
         "app":held.and_then(|held|held.observation.as_ref()).map(|v|v["result"]["window_title"].clone()).or_else(||desktop.and_then(|d|d.preview.as_ref()).filter(|(owner,_,_)|owner==chat).map(|(_,_,title)|json!(title))).unwrap_or(Value::Null),
         "previewAvailable":configured(),"previewError":null})

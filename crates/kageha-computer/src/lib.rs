@@ -18,6 +18,13 @@ pub trait DesktopBackend {
     fn input_activity(&mut self) -> Result<Option<serde_json::Value>, String> {
         Ok(None)
     }
+    fn supports_background_accessibility(&self) -> bool {
+        false
+    }
+    fn background_activity(&mut self, _pid: u64, _window: u64) -> Result<serde_json::Value, String> {
+        Err("Background Accessibility is unavailable".into())
+    }
+    fn clear_background_activity(&mut self) {}
     /// Stable physical desktop identity, required for production adapters.
     /// None is reserved for test adapters without real OS effects.
     fn desktop_id(&self) -> Option<&str> {
@@ -35,6 +42,15 @@ pub struct NativeBackend {
     _owner_thread: std::marker::PhantomData<std::rc::Rc<()>>,
 }
 impl DesktopBackend for NativeBackend {
+    fn supports_background_accessibility(&self) -> bool {
+        cfg!(all(target_os = "macos", feature = "native-macos"))
+    }
+    fn background_activity(&mut self, pid: u64, window: u64) -> Result<serde_json::Value, String> {
+        self.call("input_activity", serde_json::json!({"pid":pid,"window_id":window}))
+    }
+    fn clear_background_activity(&mut self) {
+        let _ = self.call("input_activity", serde_json::json!({"clear_background":true}));
+    }
     fn input_activity(&mut self) -> Result<Option<serde_json::Value>, String> {
         self.call("input_activity", serde_json::json!({})).map(Some)
     }

@@ -1,5 +1,18 @@
 # Kageha native computer backend
 
+Kageha can act on supported Accessibility controls in a background Mac app
+while you use another app. The target app must be in the background. When you
+interact with it, Kageha pauses until it can observe the window again. Use
+explicit manual control for shortcuts, coordinate clicks, or other actions
+that need the foreground.
+
+The macOS archive includes an ad-hoc signed helper. The launcher uses it
+when no separately installed helper or override is available. Grant
+Accessibility and Input Monitoring to Kageha Computer in System Settings.
+Screen Recording is also needed for screenshots. macOS may require renewed
+grants after updating an ad-hoc build. If using a separately installed helper,
+rebuild it from the same release before using background control.
+
 The new framework-independent protocol-2 controller, Rust client and native MCP
 stdio adapter are described in [STANDALONE.md](STANDALONE.md). They add host-only
 authorization, desktop ownership and durable action receipts without Python.

@@ -47,6 +47,13 @@ if [ "$(uname -s)" = Linux ] && [ -z "${KAGEHA_CREDENTIAL_KEY_FILE:-}" ]; then
   fi
 fi
 if [ "$(uname -s)" = Darwin ]; then
+  bundled_helper="$bundle/share/kageha/macos/Kageha Computer.app/Contents/MacOS/kageha-computer"
+  installed_helper="$HOME/.local/share/kageha/computer/Kageha Computer.app/Contents/MacOS/kageha-computer"
+  if [ -z "${KAGEHA_COMPUTER_BIN:-}" ] && [ ! -x "$installed_helper" ] && [ -x "$bundled_helper" ]; then
+    export KAGEHA_COMPUTER_BIN="$bundled_helper"
+    export KAGEHA_COMPUTER_STATE_DIR=${KAGEHA_COMPUTER_STATE_DIR:-"$data/computer"}
+    mkdir -p "$KAGEHA_COMPUTER_STATE_DIR"
+  fi
   printf 'Double-click Sign in.command to copy your login token and open your browser.\n'
 fi
 printf 'Open http://127.0.0.1:%s when the server is listening.\n' "$port"

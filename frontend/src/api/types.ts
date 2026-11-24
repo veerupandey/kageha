@@ -448,6 +448,7 @@ export interface BrowserState {
 }
 
 export interface ComputerState {
+  backgroundTargetInUse?: boolean;
   serviceEpoch?: string;
   interruptionReason?: string | null;
   runtime?: string;

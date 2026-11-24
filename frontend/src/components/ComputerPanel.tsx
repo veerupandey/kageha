@@ -441,6 +441,9 @@ export function ComputerPanel({ onCollapse, onOpenBrowser, machine = false }: Co
             <div className="mt-2 flex gap-2"><button className="stage-chip" onClick={() => setDriver("agent")}>Return control to agent</button><button className="stage-chip" onClick={() => setDriver("you")}>Resume manual control</button>
             {state.interruptionReason === "monitor_unavailable" && <button className="stage-chip" onClick={() => void requestScreenPermission("input_monitoring")}>Enable Input Monitoring</button>}</div>
           </div>}
+          {state.backgroundTargetInUse && !state.interruptionReason && <div role="status" className="absolute left-3 right-3 top-3 z-[4] rounded-xl border border-amber-400/30 bg-surface/95 p-3 text-sm text-ink">
+            <p>The target app is in use. Switch to another app so the agent can observe the target again.</p>
+          </div>}
           {controlling && state.canControl === false && <div className="absolute bottom-4 left-4 right-4 rounded-xl bg-surface/95 p-3 text-sm text-ink">{state.inputAuthorized === false ? "Agent access is disabled. Enable agent control, then choose Agent." : "You have control on your Mac. Choose Agent to return control."}</div>}
           {controlling && state.canControl !== false && (!hostedLinux || !!liveFrame?.id) ? (
             <div className="absolute inset-x-0 bottom-12 z-[3] flex justify-center bg-gradient-to-t from-black/75 via-black/25 to-transparent p-4 pt-10">
