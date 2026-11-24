@@ -6,13 +6,25 @@ The original grew into an assistant I use to control my TV, projector, coffee ma
 
 I’ve ported most of the core features to this public repo, including browser automation, computer use, remote execution over SSH, Linux and Docker workspaces, and specialist agent discovery and delegation. There’s still more to bring over. You can run Kageha on your own machine or server and add your own home integrations through [skills and MCP tools](https://github.com/veerupandey/kageha/blob/main/docs/PLUGIN_CONNECTIONS.md).
 
-[Watch the 48-second demo](#demo) · [Quick start](#quick-start) · [Features](#features) · [Build from source](#build-from-source)
+[Watch the 48-second demo](#demo) · [Kageha Personal on iPhone](#kageha-personal-on-iphone) · [Quick start](#quick-start) · [Features](#features) · [Build from source](#build-from-source)
 
 ## Demo
 
 https://github.com/user-attachments/assets/faa3b79a-a9ca-42d3-bc08-60e5146a099e
 
 Kageha turns a support backlog into a brief. On a follow-up, it checks an incident in Chromium and updates the same file. [Download the MP4 from v0.1.0](https://github.com/veerupandey/kageha/releases/download/v0.1.0/kageha-demo.mp4).
+
+## Kageha Personal on iPhone
+
+Use Kageha Personal from iPhone Messages to pick up an earlier conversation, set reminders, and receive files.
+
+<a href="https://github.com/veerupandey/kageha/releases/tag/personal-mobile-preview">
+  <img src="docs/assets/kageha-personal-demo.png" alt="Kageha Personal delivers a picnic illustration in iPhone Messages" width="280">
+</a>
+
+In this 14-second demo, Kageha returns to a picnic plan after a topic change, delivers a reminder, and sends an illustration in the same iMessage thread.
+
+[Watch the 14-second demo (MP4)](https://github.com/veerupandey/kageha/releases/download/personal-mobile-preview/kageha-personal-demo.mp4) · [Set up Kageha Personal](integrations/personal/README.md)
 
 ## Features
 
